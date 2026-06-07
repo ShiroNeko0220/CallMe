@@ -2,6 +2,7 @@ package fr.miage.toulouse.callme.utilisateurms.controller;
 
 import fr.miage.toulouse.callme.libcommun.*;
 import fr.miage.toulouse.callme.utilisateurms.DTO.UtilisateurCreationRequest;
+import fr.miage.toulouse.callme.libcommun.Role;
 import fr.miage.toulouse.callme.utilisateurms.service.UtilisateurService;
 import fr.miage.toulouse.callme.utilisateurms.entity.Utilisateur;
 import org.springframework.web.bind.annotation.*;
@@ -51,5 +52,10 @@ public class UtilisateurController {
     @GetMapping("/{id}/role")
     public Role getRoleUtilisateur(@PathVariable Long id) {
         return service.getRoleUtilisateur(id);
+    }
+
+    @GetMapping("/{id}/exists")
+    public Boolean existsById(@PathVariable Long id) {
+        return service.existsById(id);
     }
 }

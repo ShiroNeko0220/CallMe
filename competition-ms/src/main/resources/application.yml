@@ -5,13 +5,10 @@ spring:
   application:
     name: competition-ms
 
-  datasource:
-    url: jdbc:mysql://localhost:3306/competition_db
-    username: user
-    password: password
-    driver-class-name: com.mysql.cj.jdbc.Driver
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
 
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:root@localhost:27017/competition_db?authSource=admin}

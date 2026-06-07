@@ -1,9 +1,9 @@
 package fr.miage.toulouse.callme.utilisateurms.entity;
 
+import fr.miage.toulouse.callme.libcommun.Role;
 import jakarta.persistence.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
-import fr.miage.toulouse.callme.libcommun.Role;
 import lombok.*;
 
 @Entity

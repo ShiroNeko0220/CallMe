@@ -2,6 +2,7 @@ package fr.miage.toulouse.callme.utilisateurms.service;
 
 import fr.miage.toulouse.callme.libcommun.*;
 import fr.miage.toulouse.callme.utilisateurms.DTO.UtilisateurCreationRequest;
+import fr.miage.toulouse.callme.libcommun.Role;
 import fr.miage.toulouse.callme.utilisateurms.entity.Utilisateur;
 import fr.miage.toulouse.callme.utilisateurms.repository.UtilisateurRepository;
 import org.springframework.http.HttpStatus;
@@ -88,5 +89,9 @@ public class UtilisateurService {
         Utilisateur u = repo.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Utilisateur non existant"));
         return u.getRole();
+    }
+
+    public boolean existsById(Long id){
+        return repo.existsById(id);
     }
 }

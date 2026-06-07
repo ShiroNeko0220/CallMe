@@ -1,23 +1,334 @@
+version: "3.8"
+
 services:
-  mysql:
+  callme-mysql:
     image: mysql:8.4
     container_name: callme-mysql
-    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: callme_db
       MYSQL_USER: user
       MYSQL_PASSWORD: password
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
+      - callme-mysql-data:/var/lib/mysql
+      - ./docker/mysql/init-callme.sql:/docker-entrypoint-initdb.d/init-callme.sql:ro
     networks:
-      - callme-network
+      - callme-backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
 
-volumes:
-  mysql_data:
+  callme-mongodb:
+    image: mongo:7
+    container_name: callme-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+      MONGO_INITDB_DATABASE: competition_db
+    volumes:
+      - callme-mongodb-data:/data/db
+    networks:
+      - callme-backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  callme-eureka:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULE: eureka-server
+    image: callme-eureka-server:1.0.0
+    container_name: callme-eureka
+    ports:
+      - "8761:8761"
+    environment:
+      SERVER_PORT: 8761
+      EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false"
+      EUREKA_CLIENT_FETCH_REGISTRY: "false"
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
+    networks:
+      - callme-backend
+    restart: unless-stopped
+
+  callme-zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: callme-zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - callme-backend
+    restart: unless-stopped
+
+  callme-prometheus:
+    image: prom/prometheus:latest
+    container_name: callme-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      callme-eureka:
+        condition: service_started
+    networks:
+      - callme-backend
+    restart: unless-stopped
+
+  utilisateur-ms:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULE: utilisateur-ms
+    image: callme-utilisateur-ms:1.0.0
+    container_name: callme-utilisateur-ms
+    depends_on:
+      callme-eureka:
+        condition: service_started
+      callme-mysql:
+        condition: service_healthy
+      callme-zipkin:
+        condition: service_started
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://callme-mysql:3306/utilisateur_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://callme-eureka:8761/eureka/
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
+
+      SPRING_MVC_PATHMATCH_MATCHING_STRATEGY: ant_path_matcher
+
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://callme-zipkin:9411/api/v2/spans
+    networks:
+      - callme-backend
+    restart: on-failure
+
+  cours-ms:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULE: cours-ms
+    image: callme-cours-ms:1.0.0
+    container_name: callme-cours-ms
+    depends_on:
+      callme-eureka:
+        condition: service_started
+      callme-mysql:
+        condition: service_healthy
+      utilisateur-ms:
+        condition: service_started
+      callme-zipkin:
+        condition: service_started
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://callme-mysql:3306/cours_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://callme-eureka:8761/eureka/
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
+
+      SERVICES_UTILISATEUR_URL: http://utilisateur-ms:8081
+
+      SPRING_MVC_PATHMATCH_MATCHING_STRATEGY: ant_path_matcher
+
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://callme-zipkin:9411/api/v2/spans
+    networks:
+      - callme-backend
+    restart: on-failure
+
+  competition-ms:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULE: competition-ms
+    image: callme-competition-ms:1.0.0
+    container_name: callme-competition-ms
+    depends_on:
+      callme-eureka:
+        condition: service_started
+      callme-mongodb:
+        condition: service_healthy
+      utilisateur-ms:
+        condition: service_started
+      callme-zipkin:
+        condition: service_started
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://root:root@callme-mongodb:27017/competition_db?authSource=admin
+
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://callme-eureka:8761/eureka/
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
+
+      SERVICES_UTILISATEUR_URL: http://utilisateur-ms:8081
+
+      SPRING_MVC_PATHMATCH_MATCHING_STRATEGY: ant_path_matcher
+
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://callme-zipkin:9411/api/v2/spans
+    networks:
+      - callme-backend
+    restart: on-failure
+
+  badge-ms:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULE: badge-ms
+    image: callme-badge-ms:1.0.0
+    container_name: callme-badge-ms
+    depends_on:
+      callme-eureka:
+        condition: service_started
+      callme-mysql:
+        condition: service_healthy
+      utilisateur-ms:
+        condition: service_started
+      callme-zipkin:
+        condition: service_started
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://callme-mysql:3306/badge_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://callme-eureka:8761/eureka/
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
+
+      SERVICES_UTILISATEUR_URL: http://utilisateur-ms:8081
+
+      SPRING_MVC_PATHMATCH_MATCHING_STRATEGY: ant_path_matcher
+
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://callme-zipkin:9411/api/v2/spans
+    networks:
+      - callme-backend
+    restart: on-failure
+
+  presence-ms:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULE: presence-ms
+    image: callme-presence-ms:1.0.0
+    container_name: callme-presence-ms
+    depends_on:
+      callme-eureka:
+        condition: service_started
+      callme-mysql:
+        condition: service_healthy
+      utilisateur-ms:
+        condition: service_started
+      cours-ms:
+        condition: service_started
+      badge-ms:
+        condition: service_started
+      callme-zipkin:
+        condition: service_started
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://callme-mysql:3306/presence_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://callme-eureka:8761/eureka/
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
+
+      SERVICES_UTILISATEUR_URL: http://utilisateur-ms:8081
+      SERVICES_COURS_URL: http://cours-ms:8082
+      SERVICES_BADGE_URL: http://badge-ms:8084
+
+      SPRING_MVC_PATHMATCH_MATCHING_STRATEGY: ant_path_matcher
+
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://callme-zipkin:9411/api/v2/spans
+    networks:
+      - callme-backend
+    restart: on-failure
+
+  statistiques-ms:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULE: statistiques-ms
+    image: callme-statistiques-ms:1.0.0
+    container_name: callme-statistiques-ms
+    depends_on:
+      callme-eureka:
+        condition: service_started
+      utilisateur-ms:
+        condition: service_started
+      cours-ms:
+        condition: service_started
+      competition-ms:
+        condition: service_started
+      presence-ms:
+        condition: service_started
+      callme-zipkin:
+        condition: service_started
+    ports:
+      - "8086:8086"
+    environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://callme-eureka:8761/eureka/
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
+
+      SERVICES_UTILISATEUR_URL: http://utilisateur-ms:8081
+      SERVICES_COURS_URL: http://cours-ms:8082
+      SERVICES_COMPETITION_URL: http://competition-ms:8083
+      SERVICES_PRESENCE_URL: http://presence-ms:8085
+
+      SPRING_MVC_PATHMATCH_MATCHING_STRATEGY: ant_path_matcher
+
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://callme-zipkin:9411/api/v2/spans
+    networks:
+      - callme-backend
+    restart: on-failure
 
 networks:
-  callme-network:
+  callme-backend:
     driver: bridge
+
+volumes:
+  callme-mysql-data:
+  callme-mongodb-data:
