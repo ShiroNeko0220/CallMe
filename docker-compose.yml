@@ -13,7 +13,7 @@ services:
       - "3306:3306"
     volumes:
       - callme-mysql-data:/var/lib/mysql
-      - ./docker/mysql/init-callme.sql:/docker-entrypoint-initdb.d/init-callme.sql:ro
+      - ./data-init/mysql-init:/docker-entrypoint-initdb.d:ro
     networks:
       - callme-backend
     restart: unless-stopped
@@ -35,6 +35,7 @@ services:
       MONGO_INITDB_DATABASE: competition_db
     volumes:
       - callme-mongodb-data:/data/db
+      - ./data-init/mongodb-init:/docker-entrypoint-initdb.d:ro
     networks:
       - callme-backend
     restart: unless-stopped
