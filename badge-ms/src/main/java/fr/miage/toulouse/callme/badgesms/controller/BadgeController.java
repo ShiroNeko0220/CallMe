@@ -1,18 +1,19 @@
 package fr.miage.toulouse.callme.badgesms.controller;
 
 import fr.miage.toulouse.callme.badgesms.DTO.BadgeRequest;
-import fr.miage.toulouse.callme.badgesms.entity.Badge;
+import fr.miage.toulouse.callme.badgesms.DTO.BadgeResponse;
 import fr.miage.toulouse.callme.badgesms.service.BadgeService;
-import fr.miage.toulouse.callme.libcommun.ApiException;
-import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
 import java.util.List;
 
 @RestController
 @RequestMapping("/badges")
 public class BadgeController {
+
     private final BadgeService service;
 
     public BadgeController(BadgeService service) {
@@ -20,50 +21,37 @@ public class BadgeController {
     }
 
     @PostMapping
-    public Badge creer(@RequestHeader(value = "X-UserId", required = false) Long userId,
-                       @Valid @RequestBody BadgeRequest badgeRequest) {
-        if (userId == null) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "ID utilisateur manquant: header X-UserId requis");
-        }
-        return service.creerBadge(userId, badgeRequest);
+    @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
+    public BadgeResponse creer(@Valid @RequestBody BadgeRequest badgeRequest) {
+        return service.creerBadge(badgeRequest);
     }
 
     @GetMapping
-    public List<Badge> lister() {
+    public List<BadgeResponse> lister() {
         return service.listerBadges();
     }
 
     @GetMapping("/{id}")
-    public Badge consulter(@PathVariable Long id) {
+    public BadgeResponse consulter(@PathVariable Long id) {
         return service.getBadgeById(id);
     }
 
     @PatchMapping("/{idBadge}/associer/{idPorteur}")
-    public Badge associer(@RequestHeader(value = "X-UserId", required = false) Long userId,
-                          @PathVariable Long idBadge,
-                          @PathVariable Long idPorteur) {
-        if (userId == null) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "ID utilisateur manquant: header X-UserId requis");
-        }
-        return service.associerBadge(userId, idBadge, idPorteur);
+    @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
+    public BadgeResponse associer(@PathVariable Long idBadge, @PathVariable Long idPorteur) {
+        return service.associerBadge(idBadge, idPorteur);
     }
 
     @PatchMapping("/{idBadge}/dissocier")
-    public Badge dissocier(@RequestHeader(value = "X-UserId", required = false) Long userId,
-                           @PathVariable Long idBadge) {
-        if (userId == null) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "ID utilisateur manquant: header X-UserId requis");
-        }
-        return service.dissocierBadge(userId, idBadge);
+    @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
+    public BadgeResponse dissocier(@PathVariable Long idBadge) {
+        return service.dissocierBadge(idBadge);
     }
 
     @DeleteMapping("/{id}")
-    public void supprimer(@RequestHeader(value = "X-UserId", required = false) Long userId,
-                          @PathVariable Long id) {
-        if (userId == null) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "ID utilisateur manquant: header X-UserId requis");
-        }
-        service.supprimerBadge(userId, id);
+    @PreAuthorize("hasRole('PRESIDENT')")
+    public ResponseEntity<Void> supprimer(@PathVariable Long id) {
+        service.supprimerBadge(id);
+        return ResponseEntity.noContent().build();
     }
 }
-

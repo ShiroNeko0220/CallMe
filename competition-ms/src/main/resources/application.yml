@@ -9,6 +9,11 @@ spring:
     pathmatch:
       matching-strategy: ant_path_matcher
 
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+
   data:
     mongodb:
       uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:root@localhost:27017/competition_db?authSource=admin}
@@ -21,3 +26,11 @@ eureka:
     fetch-registry: true
   instance:
     prefer-ip-address: true
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      utilisateur-ms:
+        sliding-window-size: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s

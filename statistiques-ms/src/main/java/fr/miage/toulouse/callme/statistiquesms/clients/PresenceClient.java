@@ -11,14 +11,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
-@FeignClient(name = "presence-ms-statistiques", url = "${services.presence.url}")
+@FeignClient(name = "presence-ms", contextId = "presenceStatistiquesClient")
 public interface PresenceClient {
     @GetMapping("/presences/cours/{idCours}")
     List<PresenceResponse> listerParCours(@PathVariable("idCours") Long idCours);
 
     @GetMapping("/presences/cours/{idCours}/count")
     Long compterParCours(@PathVariable("idCours") Long idCours);
+
+    @GetMapping("/presences/cours/counts")
+    Map<Long, Long> compterParTousCours();
 
     @GetMapping("/presences/eleve/{idEleve}")
     List<PresenceResponse> listerParEleve(
@@ -33,7 +37,6 @@ public interface PresenceClient {
     class PresenceResponse {
         private Long idPresence;
         private Long idBadge;
-        private String numBadge;
         private Long idPorteur;
         private Long idCours;
         private LocalDateTime dateBadgeage;

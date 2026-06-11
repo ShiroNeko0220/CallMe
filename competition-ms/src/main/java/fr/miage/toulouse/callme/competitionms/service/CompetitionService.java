@@ -1,7 +1,9 @@
 package fr.miage.toulouse.callme.competitionms.service;
 
 import fr.miage.toulouse.callme.competitionms.DTO.CompetitionRequest;
+import fr.miage.toulouse.callme.competitionms.DTO.CompetitionResponse;
 import fr.miage.toulouse.callme.competitionms.DTO.ResultatRequest;
+import fr.miage.toulouse.callme.competitionms.DTO.ResultatResponse;
 import fr.miage.toulouse.callme.competitionms.clients.UtilisateurClient;
 import fr.miage.toulouse.callme.competitionms.entity.Competition;
 import fr.miage.toulouse.callme.competitionms.entity.Resultat;
@@ -10,6 +12,7 @@ import fr.miage.toulouse.callme.competitionms.repository.ResultatRepository;
 import fr.miage.toulouse.callme.libcommun.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -28,7 +31,8 @@ public class CompetitionService {
         this.utilisateurClient = utilisateurClient;
     }
 
-    public Competition creer(CompetitionRequest request) {
+    @Transactional
+    public CompetitionResponse creer(CompetitionRequest request) {
         verifierNiveau(request.getNiveauCible());
         verifierDate(request.getDate());
 
@@ -46,37 +50,44 @@ public class CompetitionService {
         competition.setLieu(request.getLieu());
         competition.setEnseignantId(request.getEnseignantId());
 
-        return competitionRepo.save(competition);
+        return toDTO(competitionRepo.save(competition));
     }
 
-    public Competition consulter(String id) {
+    private Competition findById(String id) {
         return competitionRepo.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Competition non existante"));
     }
 
-    public List<Competition> lister() {
-        return competitionRepo.findAll();
+    @Transactional(readOnly = true)
+    public CompetitionResponse consulter(String id) {
+        return toDTO(findById(id));
     }
 
-    public List<Competition> listerParNiveau(int niveau) {
+    @Transactional(readOnly = true)
+    public List<CompetitionResponse> lister() {
+        return competitionRepo.findAll().stream().map(this::toDTO).toList();
+    }
+
+    public List<CompetitionResponse> listerParNiveau(int niveau) {
         verifierNiveau(niveau);
-        return competitionRepo.findByNiveauCible(niveau);
+        return competitionRepo.findByNiveauCible(niveau).stream().map(this::toDTO).toList();
     }
 
-    public List<Competition> listerParEnseignant(Long enseignantId) {
-        return competitionRepo.findByEnseignantId(enseignantId);
+    public List<CompetitionResponse> listerParEnseignant(Long enseignantId) {
+        return competitionRepo.findByEnseignantId(enseignantId).stream().map(this::toDTO).toList();
     }
 
-    public List<Competition> listerPourEleve(Long eleveId) {
+    public List<CompetitionResponse> listerPourEleve(Long eleveId) {
         Integer niveau = utilisateurClient.getNiveauUtilisateur(eleveId);
         if (niveau == null) {
             throw new ApiException(HttpStatus.NOT_FOUND, "Élève introuvable");
         }
-        return competitionRepo.findByNiveauCible(niveau);
+        return competitionRepo.findByNiveauCible(niveau).stream().map(this::toDTO).toList();
     }
 
-    public Resultat ajouterResultat(ResultatRequest request) {
-        Competition competition = consulter(request.getCompetitionId());
+    @Transactional
+    public ResultatResponse ajouterResultat(String competitionId, ResultatRequest request) {
+        Competition competition = findById(competitionId);
         verifierNote(request.getNote());
 
         Boolean apte = utilisateurClient.enseignantApte(request.getEnseignantId(), competition.getNiveauCible());
@@ -89,7 +100,7 @@ public class CompetitionService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "L'élève n'appartient pas au niveau de cette compétition");
         }
 
-        resultatRepo.findByCompetitionIdAndEleveId(request.getCompetitionId(), request.getEleveId())
+        resultatRepo.findByCompetitionIdAndEleveId(competitionId, request.getEleveId())
                 .ifPresent(r -> {
                     throw new ApiException(HttpStatus.CONFLICT, "Résultat déjà saisi pour cet élève");
                 });
@@ -101,23 +112,48 @@ public class CompetitionService {
         resultat.setEnseignantId(request.getEnseignantId());
         resultat.setNote(request.getNote());
 
-        return resultatRepo.save(resultat);
+        return toResultatDTO(resultatRepo.save(resultat));
     }
 
-    public List<Resultat> listerResultatsParCompetition(String competitionId) {
-        consulter(competitionId);
-        return resultatRepo.findByCompetitionId(competitionId);
+    public List<ResultatResponse> listerResultatsParCompetition(String competitionId) {
+        findById(competitionId);
+        return resultatRepo.findByCompetitionId(competitionId).stream().map(this::toResultatDTO).toList();
     }
 
-    public List<Resultat> listerResultatsPourEleve(Long eleveId) {
-        return resultatRepo.findByEleveId(eleveId);
+    private List<ResultatResponse> listerResultatsPourEleve(Long eleveId) {
+        return resultatRepo.findByEleveId(eleveId).stream().map(this::toResultatDTO).toList();
     }
 
-    public List<Resultat> listerResultatsPourEleveSurPeriode(Long eleveId, LocalDate debut, LocalDate fin) {
+    public List<ResultatResponse> listerResultatsPourEleveSurPeriode(Long eleveId, LocalDate debut, LocalDate fin) {
         if (debut == null || fin == null) {
             return listerResultatsPourEleve(eleveId);
         }
-        return resultatRepo.findByEleveIdAndCompetitionDateBetween(eleveId, debut, fin);
+        return resultatRepo.findByEleveIdAndCompetitionDateBetween(eleveId, debut, fin)
+                .stream().map(this::toResultatDTO).toList();
+    }
+
+    private CompetitionResponse toDTO(Competition c) {
+        return CompetitionResponse.builder()
+                .id(c.getId())
+                .titre(c.getTitre())
+                .niveauCible(c.getNiveauCible())
+                .date(c.getDate())
+                .heureDebut(c.getHeureDebut())
+                .duree(c.getDuree())
+                .lieu(c.getLieu())
+                .enseignantId(c.getEnseignantId())
+                .build();
+    }
+
+    private ResultatResponse toResultatDTO(Resultat r) {
+        return ResultatResponse.builder()
+                .id(r.getId())
+                .competitionId(r.getCompetitionId())
+                .eleveId(r.getEleveId())
+                .enseignantId(r.getEnseignantId())
+                .note(r.getNote())
+                .competitionDate(r.getCompetitionDate())
+                .build();
     }
 
     public long compterParNiveau(int niveau) {
@@ -126,7 +162,7 @@ public class CompetitionService {
     }
 
     public void supprimer(String id) {
-        Competition competition = consulter(id);
+        Competition competition = findById(id);
         competitionRepo.delete(competition);
     }
 

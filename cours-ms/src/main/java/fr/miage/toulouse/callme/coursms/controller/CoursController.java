@@ -1,10 +1,10 @@
 package fr.miage.toulouse.callme.coursms.controller;
 
-import fr.miage.toulouse.callme.coursms.DTO.*;
-import fr.miage.toulouse.callme.coursms.entity.*;
-import fr.miage.toulouse.callme.coursms.service.*;
-import fr.miage.toulouse.callme.libcommun.*;
+import fr.miage.toulouse.callme.coursms.DTO.CoursRequest;
+import fr.miage.toulouse.callme.coursms.DTO.CoursResponse;
+import fr.miage.toulouse.callme.coursms.service.CoursService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,43 +20,40 @@ public class CoursController {
     }
 
     @PostMapping
-    public Cours creer(@RequestHeader(value = "X-Role", required = false) String role, @Valid @RequestBody CoursRequest request) {
-        RoleCheck.require(role, Role.SECRETAIRE, Role.PRESIDENT);
+    @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
+    public CoursResponse creer(@Valid @RequestBody CoursRequest request) {
         return service.creer(request);
     }
 
     @GetMapping("/{id}")
-    public Cours consulter(@PathVariable Long id) {
+    public CoursResponse consulter(@PathVariable Long id) {
         return service.consulter(id);
     }
 
     @GetMapping
-    public List<Cours> lister() {
+    public List<CoursResponse> lister() {
         return service.lister();
     }
 
     @GetMapping("/enseignant/{enseignantId}")
-    public List<Cours> listerParEnseignant(@PathVariable Long enseignantId) {
+    public List<CoursResponse> listerParEnseignant(@PathVariable Long enseignantId) {
         return service.listerParEnseignant(enseignantId);
     }
 
     @GetMapping("/niveau/{niveau}")
-    public List<Cours> listerParNiveau(@PathVariable int niveau) {
+    public List<CoursResponse> listerParNiveau(@PathVariable int niveau) {
         return service.listerParNiveau(niveau);
     }
 
     @PatchMapping("/{id}")
-    public Cours modifier(@RequestHeader(value = "X-Role", required = false) String role,
-                          @PathVariable Long id,
-                          @RequestBody CoursRequest request) {
-        RoleCheck.require(role, Role.SECRETAIRE, Role.PRESIDENT);
+    @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
+    public CoursResponse modifier(@PathVariable Long id, @RequestBody CoursRequest request) {
         return service.modifier(id, request);
     }
 
     @DeleteMapping("/{id}")
-    public void supprimer(@RequestHeader(value = "X-Role", required = false) String role,
-                          @PathVariable Long id) {
-        RoleCheck.require(role, Role.PRESIDENT);
+    @PreAuthorize("hasRole('PRESIDENT')")
+    public void supprimer(@PathVariable Long id) {
         service.supprimer(id);
     }
 }

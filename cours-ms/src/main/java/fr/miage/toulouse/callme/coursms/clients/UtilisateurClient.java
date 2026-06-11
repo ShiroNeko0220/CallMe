@@ -3,7 +3,7 @@ package fr.miage.toulouse.callme.coursms.clients;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
-@FeignClient(name = "utilisateur-ms", url = "${services.utilisateur.url}")
+@FeignClient(name = "utilisateur-ms")
 public interface UtilisateurClient {
 
     @GetMapping("/utilisateurs/{id}/apte")

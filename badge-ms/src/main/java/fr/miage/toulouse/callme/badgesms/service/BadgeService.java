@@ -1,16 +1,17 @@
 package fr.miage.toulouse.callme.badgesms.service;
 
 import fr.miage.toulouse.callme.badgesms.DTO.BadgeRequest;
-import fr.miage.toulouse.callme.badgesms.clients.*;
-import fr.miage.toulouse.callme.badgesms.entity.*;
+import fr.miage.toulouse.callme.badgesms.DTO.BadgeResponse;
+import fr.miage.toulouse.callme.badgesms.clients.UtilisateurClient;
+import fr.miage.toulouse.callme.badgesms.entity.Badge;
+import fr.miage.toulouse.callme.badgesms.entity.Statut;
 import fr.miage.toulouse.callme.badgesms.repository.BadgeRepository;
 import fr.miage.toulouse.callme.libcommun.ApiException;
-import fr.miage.toulouse.callme.libcommun.Role;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
 
 @Service
 public class BadgeService {
@@ -23,29 +24,25 @@ public class BadgeService {
         this.utilisateurClient = utilisateurClient;
     }
 
-    public Badge creerBadge(Long userId, BadgeRequest request) {
-        verifierRoleUtilisateurCourant(userId);
-
+    public BadgeResponse creerBadge(BadgeRequest request) {
         Badge badge = new Badge();
         badge.setDateCreation(LocalDateTime.now());
         badge.setStatut(Statut.DISPONIBLE);
-
-        return badgeRepository.save(badge);
+        return toDTO(badgeRepository.save(badge));
     }
 
-    public List<Badge> listerBadges() {
-        return badgeRepository.findAll();
+    public List<BadgeResponse> listerBadges() {
+        return badgeRepository.findAll().stream().map(this::toDTO).toList();
     }
 
-    public Badge getBadgeById(Long id) {
-        return badgeRepository.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Badge non existant"));
+    public BadgeResponse getBadgeById(Long id) {
+        return toDTO(findById(id));
     }
 
-    public Badge associerBadge(Long userId, Long idBadge, Long idPorteur) {
-        verifierRoleUtilisateurCourant(userId);
+    public BadgeResponse associerBadge(Long idBadge, Long idPorteur) {
         verifierPorteurExiste(idPorteur);
 
-        Badge badge = getBadgeById(idBadge);
+        Badge badge = findById(idBadge);
 
         if (badge.getStatut() == Statut.ASSOCIE) {
             throw new ApiException(HttpStatus.CONFLICT, "Ce badge est déjà associé à un porteur.");
@@ -59,13 +56,11 @@ public class BadgeService {
         badge.setStatut(Statut.ASSOCIE);
         badge.setDateAssociation(LocalDateTime.now());
 
-        return badgeRepository.save(badge);
+        return toDTO(badgeRepository.save(badge));
     }
 
-    public Badge dissocierBadge(Long userId, Long idBadge) {
-        verifierRoleUtilisateurCourant(userId);
-
-        Badge badge = getBadgeById(idBadge);
+    public BadgeResponse dissocierBadge(Long idBadge) {
+        Badge badge = findById(idBadge);
 
         if (badge.getStatut() != Statut.ASSOCIE) {
             throw new ApiException(HttpStatus.CONFLICT, "Ce badge n'est associé à aucun porteur.");
@@ -75,48 +70,38 @@ public class BadgeService {
         badge.setStatut(Statut.DISPONIBLE);
         badge.setDateAssociation(null);
 
-        return badgeRepository.save(badge);
+        return toDTO(badgeRepository.save(badge));
     }
 
-    public void supprimerBadge(Long userId, Long idBadge) {
-        verifierRoleUtilisateurCourant(userId);
-
-        Badge badge = getBadgeById(idBadge);
+    public void supprimerBadge(Long idBadge) {
+        Badge badge = findById(idBadge);
         badgeRepository.delete(badge);
+    }
+
+    private Badge findById(Long id) {
+        return badgeRepository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Badge non existant"));
+    }
+
+    private BadgeResponse toDTO(Badge badge) {
+        return BadgeResponse.builder()
+                .idBadge(badge.getIdBadge())
+                .idPorteur(badge.getIdPorteur())
+                .statut(badge.getStatut().name())
+                .dateCreation(badge.getDateCreation())
+                .dateAssociation(badge.getDateAssociation())
+                .build();
     }
 
     private void verifierPorteurExiste(Long idPorteur) {
         boolean existe;
-
         try {
             existe = utilisateurClient.existsById(idPorteur);
         } catch (Exception e) {
-            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "Impossible de vérifier l'utilisateur auprès du microservice utilisateur.");
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "Impossible de vérifier le membre. Veuillez réessayer dans quelques instants.");
         }
-
         if (!existe) {
             throw new ApiException(HttpStatus.NOT_FOUND, "Aucun utilisateur trouvé avec l'id " + idPorteur);
-        }
-    }
-
-    /**
-     * Vérifies que l'utilisateur (identifié par userId) a le rôle SECRETAIRE ou PRESIDENT
-     * récupère le rôle via Feign depuis le microservice utilisateur
-     */
-    private void verifierRoleUtilisateurCourant(Long userId) {
-        try {
-            Role roleUtilisateur = utilisateurClient.getRoleUtilisateur(userId);
-            
-            if (roleUtilisateur == null || 
-                (!roleUtilisateur.equals(Role.SECRETAIRE) && !roleUtilisateur.equals(Role.PRESIDENT))) {
-                throw new ApiException(HttpStatus.FORBIDDEN, 
-                    "Seul le (la) secrétaire ou le (la) président(e) peut effectuer cette action.");
-            }
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, 
-                "Impossible de vérifier le rôle de l'utilisateur auprès du microservice utilisateur.");
         }
     }
 }

@@ -2,16 +2,20 @@ package fr.miage.toulouse.callme.presencems.service;
 
 import fr.miage.toulouse.callme.libcommun.ApiException;
 import fr.miage.toulouse.callme.presencems.DTO.BadgeageRequest;
+import fr.miage.toulouse.callme.presencems.DTO.PresenceResponse;
 import fr.miage.toulouse.callme.presencems.clients.*;
 import fr.miage.toulouse.callme.presencems.entity.Presence;
 import fr.miage.toulouse.callme.presencems.repository.PresenceRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class PresenceService {
@@ -27,7 +31,8 @@ public class PresenceService {
         this.utilisateurClient = utilisateurClient;
     }
 
-    public Presence badger(BadgeageRequest request) {
+    @Transactional
+    public PresenceResponse badger(BadgeageRequest request) {
         BadgeClient.BadgeResponse badge = getBadge(request.getIdBadge());
 
         if (!"ASSOCIE".equals(badge.getStatut()) || badge.getIdPorteur() == null) {
@@ -50,21 +55,41 @@ public class PresenceService {
         presence.setIdPorteur(badge.getIdPorteur());
         presence.setIdCours(cours.getId());
         presence.setDateBadgeage(LocalDateTime.now());
-        return repository.save(presence);
+        return toDTO(repository.save(presence));
     }
 
-    public List<Presence> lister() { return repository.findAll(); }
+    @Transactional(readOnly = true)
+    public List<PresenceResponse> lister() { return repository.findAll().stream().map(this::toDTO).toList(); }
 
-    public List<Presence> listerParEleve(Long idEleve, LocalDate debut, LocalDate fin) {
+    @Transactional(readOnly = true)
+    public Map<Long, Long> compterParTousCours() {
+        return repository.countGroupByIdCours().stream()
+                .collect(Collectors.toMap(r -> (Long) r[0], r -> (Long) r[1]));
+    }
+
+    public List<PresenceResponse> listerParEleve(Long idEleve, LocalDate debut, LocalDate fin) {
         if (debut != null && fin != null) {
-            return repository.findByIdPorteurAndDateBadgeageBetween(idEleve, debut.atStartOfDay(), fin.atTime(LocalTime.MAX));
+            return repository.findByIdPorteurAndDateBadgeageBetween(idEleve, debut.atStartOfDay(), fin.atTime(LocalTime.MAX))
+                    .stream().map(this::toDTO).toList();
         }
-        return repository.findByIdPorteur(idEleve);
+        return repository.findByIdPorteur(idEleve).stream().map(this::toDTO).toList();
     }
 
-    public List<Presence> listerParCours(Long idCours) { return repository.findByIdCours(idCours); }
+    public List<PresenceResponse> listerParCours(Long idCours) {
+        return repository.findByIdCours(idCours).stream().map(this::toDTO).toList();
+    }
 
     public long compterParCours(Long idCours) { return repository.countByIdCours(idCours); }
+
+    private PresenceResponse toDTO(Presence p) {
+        return PresenceResponse.builder()
+                .idPresence(p.getIdPresence())
+                .idBadge(p.getIdBadge())
+                .idPorteur(p.getIdPorteur())
+                .idCours(p.getIdCours())
+                .dateBadgeage(p.getDateBadgeage())
+                .build();
+    }
 
     private BadgeClient.BadgeResponse getBadge(Long idBadge) {
         try { return badgeClient.getBadgeParId(idBadge); }

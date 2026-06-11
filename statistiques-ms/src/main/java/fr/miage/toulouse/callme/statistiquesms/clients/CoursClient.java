@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
-@FeignClient(name = "cours-ms-statistiques", url = "${services.cours.url}")
+@FeignClient(name = "cours-ms", contextId = "coursStatistiquesClient")
 public interface CoursClient {
     @GetMapping("/cours")
     List<CoursResponse> listerCours();

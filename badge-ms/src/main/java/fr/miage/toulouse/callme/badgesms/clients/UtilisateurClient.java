@@ -1,17 +1,16 @@
 package fr.miage.toulouse.callme.badgesms.clients;
 
-import fr.miage.toulouse.callme.libcommun.Role;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
-@FeignClient(name = "utilisateur-ms", url = "${services.utilisateur.url}")
+@FeignClient(name = "utilisateur-ms")
 public interface UtilisateurClient {
 
     @GetMapping("/utilisateurs/{id}/apte")
     Boolean enseignantApte(@PathVariable("id") Long id, @RequestParam("niveau") int niveau);
 
     @GetMapping("/utilisateurs/{id}/role")
-    Role getRoleUtilisateur(@PathVariable("id") Long id);
+    String getRoleUtilisateur(@PathVariable("id") Long id);
 
     @GetMapping("/utilisateurs/{id}/exists")
     Boolean existsById(@PathVariable("id") Long id);

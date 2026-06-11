@@ -18,6 +18,7 @@
         <module>badge-ms</module>
         <module>presence-ms</module>
         <module>statistiques-ms</module>
+        <module>gateway</module>
     </modules>
 
 </project>

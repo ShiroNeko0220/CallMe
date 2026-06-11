@@ -1,19 +1,91 @@
 version: "3.8"
 
 services:
-  callme-mysql:
+
+  # ── Databases ─────────────────────────────────────────────────────────────
+
+  mysql-utilisateur:
     image: mysql:8.4
-    container_name: callme-mysql
+    container_name: mysql-utilisateur
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: callme_db
+      MYSQL_DATABASE: utilisateur_db
       MYSQL_USER: user
       MYSQL_PASSWORD: password
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
-      - callme-mysql-data:/var/lib/mysql
-      - ./data-init/mysql-init:/docker-entrypoint-initdb.d:ro
+      - mysql-utilisateur-data:/var/lib/mysql
+      - ./data-init/mysql-init/utilisateur-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - callme-backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+  mysql-cours:
+    image: mysql:8.4
+    container_name: mysql-cours
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: cours_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql-cours-data:/var/lib/mysql
+      - ./data-init/mysql-init/cours-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - callme-backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+  mysql-badge:
+    image: mysql:8.4
+    container_name: mysql-badge
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: badge_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3309:3306"
+    volumes:
+      - mysql-badge-data:/var/lib/mysql
+      - ./data-init/mysql-init/badge-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - callme-backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+  mysql-presence:
+    image: mysql:8.4
+    container_name: mysql-presence
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: presence_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3310:3306"
+    volumes:
+      - mysql-presence-data:/var/lib/mysql
+      - ./data-init/mysql-init/presence-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - callme-backend
     restart: unless-stopped
@@ -45,6 +117,29 @@ services:
       timeout: 5s
       retries: 30
       start_period: 20s
+
+  # ── Messaging ─────────────────────────────────────────────────────────────
+
+  callme-rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: callme-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - callme-backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  # ── Infrastructure ────────────────────────────────────────────────────────
 
   callme-eureka:
     build:
@@ -89,6 +184,29 @@ services:
       - callme-backend
     restart: unless-stopped
 
+  # ── API Gateway ───────────────────────────────────────────────────────────
+
+  callme-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULE: gateway
+    image: callme-gateway:1.0.0
+    container_name: callme-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      callme-eureka:
+        condition: service_started
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
+    networks:
+      - callme-backend
+    restart: on-failure
+
+  # ── Microservices ─────────────────────────────────────────────────────────
+
   utilisateur-ms:
     build:
       context: .
@@ -100,21 +218,19 @@ services:
     depends_on:
       callme-eureka:
         condition: service_started
-      callme-mysql:
+      mysql-utilisateur:
         condition: service_healthy
       callme-zipkin:
         condition: service_started
     ports:
       - "8081:8081"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://callme-mysql:3306/utilisateur_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-utilisateur:3306/utilisateur_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: user
       SPRING_DATASOURCE_PASSWORD: password
 
-      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://callme-eureka:8761/eureka/
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
 
-      SPRING_MVC_PATHMATCH_MATCHING_STRATEGY: ant_path_matcher
 
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
       MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
@@ -135,7 +251,9 @@ services:
     depends_on:
       callme-eureka:
         condition: service_started
-      callme-mysql:
+      mysql-cours:
+        condition: service_healthy
+      callme-rabbitmq:
         condition: service_healthy
       utilisateur-ms:
         condition: service_started
@@ -144,16 +262,14 @@ services:
     ports:
       - "8082:8082"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://callme-mysql:3306/cours_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-cours:3306/cours_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: user
       SPRING_DATASOURCE_PASSWORD: password
 
-      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://callme-eureka:8761/eureka/
+      SPRING_RABBITMQ_HOST: callme-rabbitmq
+
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
 
-      SERVICES_UTILISATEUR_URL: http://utilisateur-ms:8081
-
-      SPRING_MVC_PATHMATCH_MATCHING_STRATEGY: ant_path_matcher
 
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
       MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
@@ -185,12 +301,8 @@ services:
     environment:
       SPRING_DATA_MONGODB_URI: mongodb://root:root@callme-mongodb:27017/competition_db?authSource=admin
 
-      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://callme-eureka:8761/eureka/
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
 
-      SERVICES_UTILISATEUR_URL: http://utilisateur-ms:8081
-
-      SPRING_MVC_PATHMATCH_MATCHING_STRATEGY: ant_path_matcher
 
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
       MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
@@ -211,7 +323,7 @@ services:
     depends_on:
       callme-eureka:
         condition: service_started
-      callme-mysql:
+      mysql-badge:
         condition: service_healthy
       utilisateur-ms:
         condition: service_started
@@ -220,16 +332,12 @@ services:
     ports:
       - "8084:8084"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://callme-mysql:3306/badge_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-badge:3306/badge_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: user
       SPRING_DATASOURCE_PASSWORD: password
 
-      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://callme-eureka:8761/eureka/
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
 
-      SERVICES_UTILISATEUR_URL: http://utilisateur-ms:8081
-
-      SPRING_MVC_PATHMATCH_MATCHING_STRATEGY: ant_path_matcher
 
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
       MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
@@ -250,7 +358,9 @@ services:
     depends_on:
       callme-eureka:
         condition: service_started
-      callme-mysql:
+      mysql-presence:
+        condition: service_healthy
+      callme-rabbitmq:
         condition: service_healthy
       utilisateur-ms:
         condition: service_started
@@ -263,18 +373,14 @@ services:
     ports:
       - "8085:8085"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://callme-mysql:3306/presence_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-presence:3306/presence_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: user
       SPRING_DATASOURCE_PASSWORD: password
 
-      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://callme-eureka:8761/eureka/
+      SPRING_RABBITMQ_HOST: callme-rabbitmq
+
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
 
-      SERVICES_UTILISATEUR_URL: http://utilisateur-ms:8081
-      SERVICES_COURS_URL: http://cours-ms:8082
-      SERVICES_BADGE_URL: http://badge-ms:8084
-
-      SPRING_MVC_PATHMATCH_MATCHING_STRATEGY: ant_path_matcher
 
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
       MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
@@ -308,15 +414,8 @@ services:
     ports:
       - "8086:8086"
     environment:
-      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://callme-eureka:8761/eureka/
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
 
-      SERVICES_UTILISATEUR_URL: http://utilisateur-ms:8081
-      SERVICES_COURS_URL: http://cours-ms:8082
-      SERVICES_COMPETITION_URL: http://competition-ms:8083
-      SERVICES_PRESENCE_URL: http://presence-ms:8085
-
-      SPRING_MVC_PATHMATCH_MATCHING_STRATEGY: ant_path_matcher
 
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
       MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
@@ -326,10 +425,27 @@ services:
       - callme-backend
     restart: on-failure
 
+  callme-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: callme-frontend:1.0.0
+    container_name: callme-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - callme-gateway
+    networks:
+      - callme-backend
+    restart: on-failure
+
 networks:
   callme-backend:
     driver: bridge
 
 volumes:
-  callme-mysql-data:
+  mysql-utilisateur-data:
+  mysql-cours-data:
+  mysql-badge-data:
+  mysql-presence-data:
   callme-mongodb-data:

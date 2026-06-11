@@ -13,7 +13,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
-@FeignClient(name = "competition-ms-statistiques", url = "${services.competition.url}")
+@FeignClient(name = "competition-ms", contextId = "competitionStatistiquesClient")
 public interface CompetitionClient {
 
     @GetMapping("/competitions/niveau/{niveau}/count")

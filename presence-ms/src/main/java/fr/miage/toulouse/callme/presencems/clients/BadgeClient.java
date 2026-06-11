@@ -6,7 +6,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-@FeignClient(name = "badge-ms-presence", url = "${services.badge.url}")
+@FeignClient(name = "badge-ms", contextId = "badgePresenceClient")
 public interface BadgeClient {
     @GetMapping("/badges/{idBadge}")
     BadgeResponse getBadgeParId(@PathVariable("idBadge") Long idBadge);

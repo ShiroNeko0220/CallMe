@@ -1,23 +1,27 @@
 package fr.miage.toulouse.callme.utilisateurms.service;
 
-import fr.miage.toulouse.callme.libcommun.*;
+import fr.miage.toulouse.callme.libcommun.ApiException;
+import fr.miage.toulouse.callme.utilisateurms.DTO.UpdateUtilisateurRequest;
 import fr.miage.toulouse.callme.utilisateurms.DTO.UtilisateurCreationRequest;
-import fr.miage.toulouse.callme.libcommun.Role;
+import fr.miage.toulouse.callme.utilisateurms.DTO.UtilisateurResponse;
+import fr.miage.toulouse.callme.utilisateurms.entity.Adresse;
 import fr.miage.toulouse.callme.utilisateurms.entity.Utilisateur;
+import fr.miage.toulouse.callme.utilisateurms.enums.Role;
 import fr.miage.toulouse.callme.utilisateurms.repository.UtilisateurRepository;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.*;
-import java.util.*;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class UtilisateurService {
     private final UtilisateurRepository repo;
 
-    public UtilisateurService(UtilisateurRepository repo){
-        this.repo=repo;
+    public UtilisateurService(UtilisateurRepository repo) {
+        this.repo = repo;
     }
 
-    public Utilisateur creer(UtilisateurCreationRequest request){
+    public UtilisateurResponse creer(UtilisateurCreationRequest request) {
         if (repo.existsByIdConnexionLogin(request.getIdConnexion().getLogin())) {
             throw new ApiException(HttpStatus.CONFLICT, "Utilisateur existant");
         }
@@ -27,71 +31,83 @@ public class UtilisateurService {
         u.setEmail(request.getEmail());
         u.setIdConnexion(request.getIdConnexion());
         u.setAdresse(request.getAdresse());
-        u.setRole(Role.MEMBRE);
-        u.setNiveauExpertise(1);
-        return repo.save(u);
+        u.setRole(request.getRole() != null ? request.getRole() : Role.MEMBRE);
+        u.setNiveauExpertise(request.getNiveauExpertise() > 0 ? request.getNiveauExpertise() : 1);
+        return toDTO(repo.save(u));
     }
 
-    public Utilisateur consulter(Long id) {
+    private Utilisateur findById(Long id) {
         return repo.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Utilisateur introuvable"));
     }
 
-    public List<Utilisateur> lister(){
-        return repo.findAll();
+    public UtilisateurResponse consulter(Long id) {
+        return toDTO(findById(id));
     }
 
-    public Utilisateur modifier(Long id, Utilisateur u){
-        Utilisateur old=consulter(id);
-
-        if (u.getNom() != null && !u.getNom().equals(old.getNom())) {
-            old.setNom(u.getNom());
-        }
-
-        if (u.getPrenom() != null && !u.getPrenom().equals(old.getPrenom())) {
-            old.setPrenom(u.getPrenom());
-        }
-
-        if (u.getEmail() != null && !u.getEmail().equals(old.getEmail())) {
-            old.setEmail(u.getEmail());
-        }
-
-        if (u.getIdConnexion() != null && !u.getIdConnexion().equals(old.getIdConnexion())) {
-            old.setIdConnexion((u.getIdConnexion()));
-        }
-
-        if (u.getAdresse() != null && !u.getAdresse().equals(old.getAdresse())) {
-            old.setAdresse((u.getAdresse()));
-        }
-
-        if(u.getNiveauExpertise() >=1 && u.getNiveauExpertise() <=5 && u.getNiveauExpertise() != old.getNiveauExpertise()) {
-            old.setNiveauExpertise(u.getNiveauExpertise());
-        }
-
-        if(u.getRole() !=null && old.getRole() != u.getRole()){
-            old.setRole(u.getRole());
-        }
-        return repo.save(old);
+    public List<UtilisateurResponse> lister() {
+        return repo.findAll().stream().map(this::toDTO).toList();
     }
 
-    public boolean enseignantApte(Long id,int niveau){
-        Utilisateur u = repo.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Utilisateur non existant"));
+    public UtilisateurResponse modifier(Long id, UpdateUtilisateurRequest request) {
+        Utilisateur u = findById(id);
+
+        if (request.getNom() != null)    u.setNom(request.getNom());
+        if (request.getPrenom() != null) u.setPrenom(request.getPrenom());
+        if (request.getEmail() != null)  u.setEmail(request.getEmail());
+
+        if (request.getVille() != null || request.getPays() != null) {
+            if (u.getAdresse() == null) u.setAdresse(new Adresse());
+            if (request.getVille() != null) u.getAdresse().setVille(request.getVille());
+            if (request.getPays()  != null) u.getAdresse().setPays(request.getPays());
+        }
+
+        return toDTO(repo.save(u));
+    }
+
+    private UtilisateurResponse toDTO(Utilisateur u) {
+        return UtilisateurResponse.builder()
+                .id(u.getId())
+                .nom(u.getNom())
+                .prenom(u.getPrenom())
+                .email(u.getEmail())
+                .login(u.getIdConnexion() != null ? u.getIdConnexion().getLogin() : null)
+                .ville(u.getAdresse() != null ? u.getAdresse().getVille() : null)
+                .pays(u.getAdresse() != null ? u.getAdresse().getPays() : null)
+                .niveauExpertise(u.getNiveauExpertise())
+                .role(u.getRole())
+                .build();
+    }
+
+    public boolean enseignantApte(Long id, int niveau) {
+        Utilisateur u = findById(id);
         return u.getRole() == Role.ENSEIGNANT && u.getNiveauExpertise() >= niveau;
     }
 
-    public int getNiveauUtilisateur(Long id){
-        Utilisateur u = repo.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Utilisateur non existant"));
-        return u.getNiveauExpertise();
+    public int getNiveauUtilisateur(Long id) {
+        return findById(id).getNiveauExpertise();
     }
 
-    public Role getRoleUtilisateur(Long id){
-        Utilisateur u = repo.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Utilisateur non existant"));
-        return u.getRole();
+    public Role getRoleUtilisateur(Long id) {
+        return findById(id).getRole();
     }
 
-    public boolean existsById(Long id){
+    public void supprimer(Long id) {
+        if (!repo.existsById(id)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Utilisateur introuvable");
+        }
+        repo.deleteById(id);
+    }
+
+    public boolean existsById(Long id) {
         return repo.existsById(id);
+    }
+
+    public UtilisateurResponse login(String login, String mdp) {
+        Utilisateur u = repo.findByIdConnexionLogin(login)
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Identifiants incorrects"));
+        if (!u.getIdConnexion().getMdp().equals(mdp)) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "Identifiants incorrects");
+        }
+        return toDTO(u);
     }
 }

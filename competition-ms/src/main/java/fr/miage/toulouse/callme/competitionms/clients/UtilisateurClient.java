@@ -1,10 +1,9 @@
 package fr.miage.toulouse.callme.competitionms.clients;
 
-import fr.miage.toulouse.callme.libcommun.Role;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
-@FeignClient(name = "utilisateur-ms", url = "${services.utilisateur.url}")
+@FeignClient(name = "utilisateur-ms")
 public interface UtilisateurClient {
 
     @GetMapping("/utilisateurs/{id}/apte")
@@ -17,5 +16,5 @@ public interface UtilisateurClient {
     Integer getNiveauUtilisateur(@PathVariable("id") Long id);
 
     @GetMapping("/utilisateurs/{id}/role")
-    Role getRoleUtilisateur(@PathVariable("id") Long id);
+    String getRoleUtilisateur(@PathVariable("id") Long id);
 }

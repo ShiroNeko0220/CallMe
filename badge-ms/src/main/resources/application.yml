@@ -9,20 +9,21 @@ spring:
     pathmatch:
       matching-strategy: ant_path_matcher
 
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+
   datasource:
-    url: jdbc:mysql://localhost:3306/badge_db
-    username: user
-    password: password
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3309/badge_db}
+    username: ${SPRING_DATASOURCE_USERNAME:user}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
-
-services:
-  utilisateur:
-    url: http://localhost:8081
 
 eureka:
   client:
@@ -32,3 +33,11 @@ eureka:
     fetch-registry: true
   instance:
     prefer-ip-address: true
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      utilisateur-ms:
+        sliding-window-size: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s

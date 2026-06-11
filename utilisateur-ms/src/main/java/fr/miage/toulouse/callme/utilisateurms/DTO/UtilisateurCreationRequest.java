@@ -2,6 +2,7 @@ package fr.miage.toulouse.callme.utilisateurms.DTO;
 
 import fr.miage.toulouse.callme.utilisateurms.entity.Adresse;
 import fr.miage.toulouse.callme.utilisateurms.entity.IdConnexion;
+import fr.miage.toulouse.callme.utilisateurms.enums.Role;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -23,5 +24,10 @@ public class UtilisateurCreationRequest {
 
     @Valid
     private Adresse adresse;
+
+    private Role role;
+
+    @Min(1) @Max(5)
+    private int niveauExpertise;
 
 }

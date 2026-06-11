@@ -1,47 +1,65 @@
 package fr.miage.toulouse.callme.utilisateurms.controller;
 
-import fr.miage.toulouse.callme.libcommun.*;
+import fr.miage.toulouse.callme.utilisateurms.DTO.LoginRequest;
+import fr.miage.toulouse.callme.utilisateurms.DTO.UpdateUtilisateurRequest;
 import fr.miage.toulouse.callme.utilisateurms.DTO.UtilisateurCreationRequest;
-import fr.miage.toulouse.callme.libcommun.Role;
+import fr.miage.toulouse.callme.utilisateurms.DTO.UtilisateurResponse;
 import fr.miage.toulouse.callme.utilisateurms.service.UtilisateurService;
-import fr.miage.toulouse.callme.utilisateurms.entity.Utilisateur;
-import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
-import java.util.*;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/utilisateurs")
 public class UtilisateurController {
+
     private final UtilisateurService service;
 
-    public UtilisateurController(UtilisateurService service){
-        this.service=service;
+    public UtilisateurController(UtilisateurService service) {
+        this.service = service;
+    }
+
+    @PostMapping("/login")
+    public UtilisateurResponse login(@Valid @RequestBody LoginRequest request) {
+        return service.login(request.getLogin(), request.getMdp());
     }
 
     @PostMapping
-    public Utilisateur creer(@Valid @RequestBody UtilisateurCreationRequest u){
+    public UtilisateurResponse creer(@Valid @RequestBody UtilisateurCreationRequest u) {
         return service.creer(u);
     }
 
     @GetMapping("/{id}")
-    public Utilisateur consulter(@PathVariable Long id){
+    public UtilisateurResponse consulter(@PathVariable Long id) {
         return service.consulter(id);
     }
 
     @GetMapping
-    public List<Utilisateur> lister(){
+    public List<UtilisateurResponse> lister() {
         return service.lister();
     }
 
     @PatchMapping("/{id}")
-    public Utilisateur modifier(@RequestHeader(value="X-Role",required=false) String role,@RequestBody Utilisateur u){
-        RoleCheck.require(role, Role.SECRETAIRE, Role.PRESIDENT);
-        return service.modifier(u.getId(),u);
+    @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
+    public UtilisateurResponse modifier(
+            @PathVariable Long id,
+            @RequestBody UpdateUtilisateurRequest request) {
+        return service.modifier(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('PRESIDENT')")
+    public ResponseEntity<Void> supprimer(@PathVariable Long id) {
+        service.supprimer(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}/apte")
-    public boolean enseignantApte(@PathVariable Long id,@RequestParam int niveau){
-        return service.enseignantApte(id,niveau);
+    public boolean enseignantApte(@PathVariable Long id, @RequestParam int niveau) {
+        return service.enseignantApte(id, niveau);
     }
 
     @GetMapping("/{id}/niveau")
@@ -50,8 +68,8 @@ public class UtilisateurController {
     }
 
     @GetMapping("/{id}/role")
-    public Role getRoleUtilisateur(@PathVariable Long id) {
-        return service.getRoleUtilisateur(id);
+    public String getRoleUtilisateur(@PathVariable Long id) {
+        return service.getRoleUtilisateur(id).name();
     }
 
     @GetMapping("/{id}/exists")

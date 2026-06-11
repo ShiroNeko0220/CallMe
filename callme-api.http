@@ -1,0 +1,242 @@
+### CallMe
+### Point d'entrée : http://localhost:8080
+
+@baseUrl = http://localhost:8080
+
+###############################################
+### UTILISATEURS
+###############################################
+
+### Créer un utilisateur (ENSEIGNANT)
+# @name createEnseignant
+POST {{baseUrl}}/api/utilisateurs
+Content-Type: application/json
+
+{
+  "nom": "Test",
+  "prenom": "Katia",
+  "email": "katia@callme.fr",
+  "idConnexion": {
+    "login": "katia",
+    "mdp": "secret123"
+  },
+  "adresse": {
+    "ville": "Toulouse",
+    "pays": "France"
+  }
+}
+
+###
+
+### Créer un utilisateur (MEMBRE)
+POST {{baseUrl}}/api/utilisateurs
+Content-Type: application/json
+
+{
+  "nom": "Tony",
+  "prenom": "Stark",
+  "email": "tony@callme.fr",
+  "idConnexion": {
+    "login": "tony",
+    "mdp": "ImIronMan"
+  },
+  "adresse": {
+    "ville": "New York",
+    "pays": "USA"
+  }
+}
+
+###
+
+### Lister tous les utilisateurs
+GET {{baseUrl}}/api/utilisateurs
+X-Role: SECRETAIRE
+
+###
+
+### Consulter un utilisateur par ID
+GET {{baseUrl}}/api/utilisateurs/1
+X-Role: MEMBRE
+
+###
+
+### Modifier un utilisateur
+PATCH {{baseUrl}}/api/utilisateurs/1
+X-Role: SECRETAIRE
+Content-Type: application/json
+
+{
+  "nom": "Test",
+  "prenom": "Thu",
+  "email": "Thu@callme.fr",
+  "ville": "Space",
+  "pays": "France"
+}
+
+###
+
+### Supprimer un utilisateur
+DELETE {{baseUrl}}/api/utilisateurs/1
+X-Role: PRESIDENT
+
+###############################################
+### COURS
+###############################################
+
+### Créer un cours (enseignantId doit exister et avoir niveauExpertise >= niveauCible)
+POST {{baseUrl}}/api/cours
+X-Role: ENSEIGNANT
+Content-Type: application/json
+
+{
+  "titre": "Initiation au tennis de table",
+  "date": "2026-07-20",
+  "heureDebut": "10:00",
+  "duree": 90,
+  "lieu": "HELL Salle 2",
+  "niveauCible": 3,
+  "enseignantId": 1
+}
+
+###
+
+### Lister tous les cours
+GET {{baseUrl}}/api/cours
+
+###
+
+### Cours par enseignant
+GET {{baseUrl}}/api/cours/enseignant/1
+
+###
+
+### Cours par niveau
+GET {{baseUrl}}/api/cours/niveau/3
+
+###############################################
+### BADGES NFC
+###############################################
+
+### Créer un badge pour un porteur
+POST {{baseUrl}}/api/badges
+X-Role: SECRETAIRE
+Content-Type: application/json
+
+{
+  "idPorteur": 2
+}
+
+###
+
+### Associer un badge à un porteur (badgeId=1, porteurId=2)
+PUT {{baseUrl}}/api/badges/1/associer/2
+X-Role: SECRETAIRE
+
+###
+
+### Dissocier un badge (badgeId=1)
+PUT {{baseUrl}}/api/badges/1/dissocier
+X-Role: SECRETAIRE
+
+###############################################
+### PRÉSENCES
+###############################################
+
+### Enregistrer une présence (badgeage NFC)
+POST {{baseUrl}}/api/presences
+Content-Type: application/json
+
+{
+  "idBadge": 1,
+  "idCours": 1
+}
+
+###
+
+### Présences par cours
+GET {{baseUrl}}/api/presences/cours/1
+X-Role: ENSEIGNANT
+
+###
+
+### Présences par élève
+GET {{baseUrl}}/api/presences/eleve/2
+X-Role: MEMBRE
+
+###############################################
+### COMPÉTITIONS
+###############################################
+
+### Créer une compétition
+POST {{baseUrl}}/api/competitions
+X-Role: ENSEIGNANT
+Content-Type: application/json
+
+{
+  "titre": "Tournoi été 2026",
+  "niveauCible": 3,
+  "date": "2026-08-15",
+  "heureDebut": "09:00",
+  "duree": 180,
+  "lieu": "Gymnase HEAVEN",
+  "enseignantId": 1
+}
+
+###
+
+### Ajouter un résultat à une compétition (competitionId=<mongo-id>)
+POST {{baseUrl}}/api/competitions/REMPLACER_PAR_ID_MONGO/resultats
+X-Role: ENSEIGNANT
+Content-Type: application/json
+
+{
+  "eleveId": 2,
+  "enseignantId": 1,
+  "note": 8.5
+}
+
+###############################################
+### STATISTIQUES
+###############################################
+
+### Statistiques d'un élève
+GET {{baseUrl}}/api/statistiques/eleve/2
+X-Role: MEMBRE
+
+###
+
+### Statistiques d'un cours
+GET {{baseUrl}}/api/statistiques/cours/1
+X-Role: ENSEIGNANT
+
+###############################################
+### SWAGGER UI (accès direct par service)
+###############################################
+
+### Swagger utilisateur-ms
+GET http://localhost:8081/swagger-ui/index.html
+
+###
+
+### Swagger cours-ms
+GET http://localhost:8082/swagger-ui/index.html
+
+###
+
+### Swagger competition-ms
+GET http://localhost:8083/swagger-ui/index.html
+
+###
+
+### Swagger badge-ms
+GET http://localhost:8084/swagger-ui/index.html
+
+###
+
+### Swagger presence-ms
+GET http://localhost:8085/swagger-ui/index.html
+
+###
+
+### Swagger statistiques-ms
+GET http://localhost:8086/swagger-ui/index.html

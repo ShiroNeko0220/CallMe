@@ -9,15 +9,10 @@ spring:
     pathmatch:
       matching-strategy: ant_path_matcher
 
-services:
-  presence:
-    url: ${SERVICES_PRESENCE_URL:http://localhost:8085}
-  cours:
-    url: ${SERVICES_COURS_URL:http://localhost:8082}
-  competition:
-    url: ${SERVICES_COMPETITION_URL:http://localhost:8083}
-  utilisateur:
-    url: ${SERVICES_UTILISATEUR_URL:http://localhost:8081}
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
 
 eureka:
   client:
@@ -27,6 +22,26 @@ eureka:
     fetch-registry: true
   instance:
     prefer-ip-address: true
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      utilisateur-ms:
+        sliding-window-size: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+      cours-ms:
+        sliding-window-size: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+      presence-ms:
+        sliding-window-size: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+      competition-ms:
+        sliding-window-size: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
 
 management:
   endpoints:
@@ -42,4 +57,3 @@ management:
   zipkin:
     tracing:
       endpoint: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT:http://localhost:9411/api/v2/spans}
-

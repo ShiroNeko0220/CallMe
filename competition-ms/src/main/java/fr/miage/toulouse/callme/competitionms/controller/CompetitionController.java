@@ -1,12 +1,14 @@
 package fr.miage.toulouse.callme.competitionms.controller;
 
 import fr.miage.toulouse.callme.competitionms.DTO.CompetitionRequest;
+import fr.miage.toulouse.callme.competitionms.DTO.CompetitionResponse;
 import fr.miage.toulouse.callme.competitionms.DTO.ResultatRequest;
-import fr.miage.toulouse.callme.competitionms.entity.Competition;
-import fr.miage.toulouse.callme.competitionms.entity.Resultat;
+import fr.miage.toulouse.callme.competitionms.DTO.ResultatResponse;
 import fr.miage.toulouse.callme.competitionms.service.CompetitionService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -23,58 +25,63 @@ public class CompetitionController {
     }
 
     @PostMapping
-    public Competition creer(@Valid @RequestBody CompetitionRequest request) {
+    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'PRESIDENT')")
+    public CompetitionResponse creer(@Valid @RequestBody CompetitionRequest request) {
         return competitionService.creer(request);
     }
 
     @GetMapping("/{id}")
-    public Competition consulter(@PathVariable String id) {
+    public CompetitionResponse consulter(@PathVariable String id) {
         return competitionService.consulter(id);
     }
 
     @GetMapping
-    public List<Competition> lister() {
+    public List<CompetitionResponse> lister() {
         return competitionService.lister();
     }
 
     @GetMapping("/niveau/{niveau}")
-    public List<Competition> listerParNiveau(@PathVariable int niveau) {
+    public List<CompetitionResponse> listerParNiveau(@PathVariable int niveau) {
         return competitionService.listerParNiveau(niveau);
     }
 
     @GetMapping("/enseignant/{enseignantId}")
-    public List<Competition> listerParEnseignant(@PathVariable Long enseignantId) {
+    public List<CompetitionResponse> listerParEnseignant(@PathVariable Long enseignantId) {
         return competitionService.listerParEnseignant(enseignantId);
     }
 
     @GetMapping("/eleve/{eleveId}")
-    public List<Competition> listerPourEleve(@PathVariable Long eleveId) {
+    public List<CompetitionResponse> listerPourEleve(@PathVariable Long eleveId) {
         return competitionService.listerPourEleve(eleveId);
     }
 
     @DeleteMapping("/{id}")
-    public void supprimer(@PathVariable String id) {
+    @PreAuthorize("hasRole('PRESIDENT')")
+    public ResponseEntity<Void> supprimer(@PathVariable String id) {
         competitionService.supprimer(id);
+        return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/resultats")
-    public Resultat ajouterResultat(@Valid @RequestBody ResultatRequest request) {
-        return competitionService.ajouterResultat(request);
+    @PostMapping("/{competitionId}/resultats")
+    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'PRESIDENT')")
+    public ResultatResponse ajouterResultat(
+            @PathVariable String competitionId,
+            @Valid @RequestBody ResultatRequest request) {
+        return competitionService.ajouterResultat(competitionId, request);
     }
 
     @GetMapping("/{competitionId}/resultats")
-    public List<Resultat> listerResultatsParCompetition(@PathVariable String competitionId) {
+    public List<ResultatResponse> listerResultatsParCompetition(@PathVariable String competitionId) {
         return competitionService.listerResultatsParCompetition(competitionId);
     }
 
     @GetMapping("/eleve/{eleveId}/resultats")
-    public List<Resultat> listerResultatsPourEleve(
+    public List<ResultatResponse> listerResultatsPourEleve(
             @PathVariable Long eleveId,
             @RequestParam(value = "debut", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate debut,
             @RequestParam(value = "fin", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin
-    ) {
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
         return competitionService.listerResultatsPourEleveSurPeriode(eleveId, debut, fin);
     }
 

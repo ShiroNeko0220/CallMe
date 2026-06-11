@@ -7,7 +7,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,8 +31,9 @@ public class StatistiquesService {
         long nombreCours = cours.size();
         if (nombreCours == 0) return new CoursStatistiqueResponse(0, 0.0);
 
+        Map<Long, Long> counts = presenceClient.compterParTousCours();
         long totalPresences = cours.stream()
-                .mapToLong(c -> Optional.ofNullable(presenceClient.compterParCours(c.getId())).orElse(0L))
+                .mapToLong(c -> counts.getOrDefault(c.getId(), 0L))
                 .sum();
         return new CoursStatistiqueResponse(nombreCours, (double) totalPresences / nombreCours);
     }

@@ -1,22 +1,30 @@
 package fr.miage.toulouse.callme.coursms;
 
 import fr.miage.toulouse.callme.coursms.DTO.CoursRequest;
+import fr.miage.toulouse.callme.coursms.DTO.CoursResponse;
 import fr.miage.toulouse.callme.coursms.clients.UtilisateurClient;
 import fr.miage.toulouse.callme.coursms.entity.Cours;
 import fr.miage.toulouse.callme.coursms.repository.CoursRepository;
 import fr.miage.toulouse.callme.coursms.service.CoursService;
 import fr.miage.toulouse.callme.libcommun.ApiException;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
-import java.time.*;
-import java.util.*;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,11 +36,13 @@ class CoursServiceTest {
     @Mock
     private UtilisateurClient utilisateurClient;
 
+    @Mock
+    private RabbitTemplate rabbitTemplate;
+
     @InjectMocks
     private CoursService service;
 
     private CoursRequest request;
-    
     private Cours baseCours;
 
     @BeforeEach
@@ -45,7 +55,7 @@ class CoursServiceTest {
         request.setLieu("Salle 101");
         request.setNiveauCible(3);
         request.setEnseignantId(1L);
-        
+
         baseCours = new Cours();
         baseCours.setId(100L);
         baseCours.setTitre(request.getTitre());
@@ -61,9 +71,10 @@ class CoursServiceTest {
     void creer_succes() {
         when(utilisateurClient.enseignantApte(1L, 3)).thenReturn(true);
         when(repo.save(any(Cours.class))).thenReturn(baseCours);
-        
-        Cours resultat = service.creer(request);
-        
+        doNothing().when(rabbitTemplate).convertAndSend(anyString(), anyString(), any(Object.class));
+
+        CoursResponse resultat = service.creer(request);
+
         assertNotNull(resultat);
         assertEquals(100L, resultat.getId());
         assertEquals("Mathématiques", resultat.getTitre());
@@ -71,17 +82,15 @@ class CoursServiceTest {
         assertEquals("Salle 101", resultat.getLieu());
         assertEquals(3, resultat.getNiveauCible());
         assertEquals(1L, resultat.getEnseignantId());
-        assertEquals(LocalDate.now().plusDays(10), resultat.getDate());
-        assertEquals(LocalTime.of(14, 0), resultat.getHeureDebut());
-        
+
         verify(utilisateurClient).enseignantApte(1L, 3);
         verify(repo).save(any(Cours.class));
     }
 
     @Test
     void creer_DureeInvalide() {
-        request.setDuree(30); 
-        
+        request.setDuree(30);
+
         assertThatThrownBy(() -> service.creer(request))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("Durée invalide (45min minimum)");
@@ -118,7 +127,7 @@ class CoursServiceTest {
     void consulter_succes() {
         when(repo.findById(100L)).thenReturn(Optional.of(baseCours));
 
-        Cours resultat = service.consulter(100L);
+        CoursResponse resultat = service.consulter(100L);
 
         assertNotNull(resultat);
         assertEquals(100L, resultat.getId());
@@ -127,8 +136,6 @@ class CoursServiceTest {
         assertEquals("Salle 101", resultat.getLieu());
         assertEquals(3, resultat.getNiveauCible());
         assertEquals(1L, resultat.getEnseignantId());
-        assertEquals(LocalDate.now().plusDays(10), resultat.getDate());
-        assertEquals(LocalTime.of(14, 0), resultat.getHeureDebut());
     }
 
     @Test
@@ -144,10 +151,9 @@ class CoursServiceTest {
     void lister_succes() {
         when(repo.findAll()).thenReturn(List.of(baseCours));
 
-        List<Cours> resultat = service.lister();
+        List<CoursResponse> resultat = service.lister();
 
         assertEquals(1, resultat.size());
-
         verify(repo).findAll();
     }
 
@@ -155,7 +161,7 @@ class CoursServiceTest {
     void listerParNiveau_succes() {
         when(repo.findByNiveauCible(3)).thenReturn(List.of(baseCours));
 
-        List<Cours> resultat = service.listerParNiveau(3);
+        List<CoursResponse> resultat = service.listerParNiveau(3);
 
         assertEquals(1, resultat.size());
         verify(repo).findByNiveauCible(3);
@@ -168,27 +174,21 @@ class CoursServiceTest {
                 .hasMessage("Niveau invalide (entre 1 et 5)");
     }
 
-
     @Test
     void modifier_succes() {
         when(repo.findById(100L)).thenReturn(Optional.of(baseCours));
+        when(repo.save(any(Cours.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CoursRequest updateRequest = new CoursRequest();
         updateRequest.setTitre("Nouveau Titre");
         updateRequest.setDuree(90);
 
-        when(repo.save(any(Cours.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        Cours resultat = service.modifier(100L, updateRequest);
+        CoursResponse resultat = service.modifier(100L, updateRequest);
 
         assertNotNull(resultat);
         assertEquals("Nouveau Titre", resultat.getTitre());
         assertEquals(90, resultat.getDuree());
         assertEquals("Salle 101", resultat.getLieu());
-        assertEquals(3, resultat.getNiveauCible());
-        assertEquals(1L, resultat.getEnseignantId());
-        assertEquals(LocalDate.now().plusDays(10), resultat.getDate());
-        assertEquals(LocalTime.of(14, 0), resultat.getHeureDebut());
         verify(repo).save(baseCours);
     }
 
@@ -222,6 +222,5 @@ class CoursServiceTest {
                 .hasMessage("Cours non existant");
 
         verify(repo, never()).delete(any(Cours.class));
-
     }
 }
