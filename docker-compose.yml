@@ -156,11 +156,11 @@ services:
       - callme-backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
       interval: 10s
-      timeout: 5s
-      retries: 20
-      start_period: 30s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
 
   # ── Infrastructure ────────────────────────────────────────────────────────
 
@@ -269,7 +269,7 @@ services:
       mysql-utilisateur:
         condition: service_healthy
       callme-rabbitmq:
-        condition: service_healthy
+        condition: service_started
       callme-zipkin:
         condition: service_started
     ports:
@@ -307,7 +307,7 @@ services:
       mysql-cours:
         condition: service_healthy
       callme-rabbitmq:
-        condition: service_healthy
+        condition: service_started
       utilisateur-ms:
         condition: service_started
       callme-zipkin:
@@ -347,7 +347,7 @@ services:
       callme-mongodb:
         condition: service_healthy
       callme-rabbitmq:
-        condition: service_healthy
+        condition: service_started
       utilisateur-ms:
         condition: service_started
       callme-zipkin:
@@ -421,7 +421,7 @@ services:
       mysql-presence:
         condition: service_healthy
       callme-rabbitmq:
-        condition: service_healthy
+        condition: service_started
       utilisateur-ms:
         condition: service_started
       cours-ms:
@@ -465,7 +465,7 @@ services:
       mysql-statistiques:
         condition: service_healthy
       callme-rabbitmq:
-        condition: service_healthy
+        condition: service_started
       callme-zipkin:
         condition: service_started
     ports:

@@ -20,6 +20,20 @@ spring:
       ddl-auto: update
     show-sql: true
 
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: 5672
+    username: guest
+    password: guest
+    connection-timeout: 10s
+    listener:
+      simple:
+        retry:
+          enabled: true
+          initial-interval: 3s
+          max-attempts: 10
+          multiplier: 2
+
   config:
     import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
 

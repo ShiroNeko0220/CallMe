@@ -24,6 +24,14 @@ spring:
     port: 5672
     username: guest
     password: guest
+    connection-timeout: 10s
+    listener:
+      simple:
+        retry:
+          enabled: true
+          initial-interval: 3s
+          max-attempts: 10
+          multiplier: 2
 
 eureka:
   client:
