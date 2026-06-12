@@ -28,7 +28,7 @@ export default function LoginPage({ onLogin }) {
             <img src="/logo.svg" alt="Oduru" className="h-12 w-12" />
             <span className="text-3xl font-bold text-blue-600">Oduru</span>
           </div>
-          <p className="text-gray-400 text-sm">Club de danse rythmique</p>
+          <p className="text-gray-400 text-sm">Club de danse</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">

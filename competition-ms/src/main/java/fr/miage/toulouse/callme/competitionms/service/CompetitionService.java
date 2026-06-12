@@ -5,11 +5,13 @@ import fr.miage.toulouse.callme.competitionms.DTO.CompetitionResponse;
 import fr.miage.toulouse.callme.competitionms.DTO.ResultatRequest;
 import fr.miage.toulouse.callme.competitionms.DTO.ResultatResponse;
 import fr.miage.toulouse.callme.competitionms.clients.UtilisateurClient;
+import fr.miage.toulouse.callme.competitionms.config.RabbitMQConfig;
 import fr.miage.toulouse.callme.competitionms.entity.Competition;
 import fr.miage.toulouse.callme.competitionms.entity.Resultat;
 import fr.miage.toulouse.callme.competitionms.repository.CompetitionRepository;
 import fr.miage.toulouse.callme.competitionms.repository.ResultatRepository;
 import fr.miage.toulouse.callme.libcommun.ApiException;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class CompetitionService {
@@ -24,11 +27,14 @@ public class CompetitionService {
     private final CompetitionRepository competitionRepo;
     private final ResultatRepository resultatRepo;
     private final UtilisateurClient utilisateurClient;
+    private final RabbitTemplate rabbitTemplate;
 
-    public CompetitionService(CompetitionRepository competitionRepo, ResultatRepository resultatRepo, UtilisateurClient utilisateurClient) {
+    public CompetitionService(CompetitionRepository competitionRepo, ResultatRepository resultatRepo,
+                              UtilisateurClient utilisateurClient, RabbitTemplate rabbitTemplate) {
         this.competitionRepo = competitionRepo;
         this.resultatRepo = resultatRepo;
         this.utilisateurClient = utilisateurClient;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     @Transactional
@@ -50,7 +56,16 @@ public class CompetitionService {
         competition.setLieu(request.getLieu());
         competition.setEnseignantId(request.getEnseignantId());
 
-        return toDTO(competitionRepo.save(competition));
+        Competition saved = competitionRepo.save(competition);
+
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.KEY_COMPETITION, Map.of(
+                "id", saved.getId(),
+                "titre", saved.getTitre(),
+                "niveauCible", saved.getNiveauCible(),
+                "date", saved.getDate().toString()
+        ));
+
+        return toDTO(saved);
     }
 
     private Competition findById(String id) {
@@ -90,9 +105,9 @@ public class CompetitionService {
         Competition competition = findById(competitionId);
         verifierNote(request.getNote());
 
-        Boolean apte = utilisateurClient.enseignantApte(request.getEnseignantId(), competition.getNiveauCible());
-        if (!Boolean.TRUE.equals(apte)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Seul un enseignant apte peut saisir ce résultat");
+        String roleEnseignant = utilisateurClient.getRoleUtilisateur(request.getEnseignantId());
+        if (!"ENSEIGNANT".equals(roleEnseignant) && !"PRESIDENT".equals(roleEnseignant)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Seul un enseignant peut saisir un résultat");
         }
 
         Integer niveauEleve = utilisateurClient.getNiveauUtilisateur(request.getEleveId());
@@ -112,7 +127,18 @@ public class CompetitionService {
         resultat.setEnseignantId(request.getEnseignantId());
         resultat.setNote(request.getNote());
 
-        return toResultatDTO(resultatRepo.save(resultat));
+        Resultat saved = resultatRepo.save(resultat);
+
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.KEY_RESULTAT, Map.of(
+                "id", saved.getId(),
+                "competitionId", saved.getCompetitionId(),
+                "eleveId", saved.getEleveId(),
+                "enseignantId", saved.getEnseignantId(),
+                "note", saved.getNote().toString(),
+                "competitionDate", saved.getCompetitionDate().toString()
+        ));
+
+        return toResultatDTO(saved);
     }
 
     public List<ResultatResponse> listerResultatsParCompetition(String competitionId) {

@@ -1,0 +1,21 @@
+server:
+  port: 8086
+
+spring:
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+    loadbalancer:
+      eager-load:
+        enabled: true
+        clients: utilisateur-ms,cours-ms,presence-ms,competition-ms
+
+resilience4j:
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 10s

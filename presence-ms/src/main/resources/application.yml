@@ -24,12 +24,19 @@ spring:
     openfeign:
       circuitbreaker:
         enabled: true
+    loadbalancer:
+      eager-load:
+        enabled: true
+        clients: utilisateur-ms,cours-ms,badge-ms
 
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST:localhost}
     port: 5672
     username: guest
     password: guest
+
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
 
 eureka:
   client:
@@ -41,6 +48,10 @@ eureka:
     prefer-ip-address: true
 
 resilience4j:
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 10s
   circuitbreaker:
     instances:
       utilisateur-ms:

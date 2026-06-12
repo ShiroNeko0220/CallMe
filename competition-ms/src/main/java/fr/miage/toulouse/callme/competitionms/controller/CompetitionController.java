@@ -7,6 +7,7 @@ import fr.miage.toulouse.callme.competitionms.DTO.ResultatResponse;
 import fr.miage.toulouse.callme.competitionms.service.CompetitionService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -26,8 +27,8 @@ public class CompetitionController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ENSEIGNANT', 'PRESIDENT')")
-    public CompetitionResponse creer(@Valid @RequestBody CompetitionRequest request) {
-        return competitionService.creer(request);
+    public ResponseEntity<CompetitionResponse> creer(@Valid @RequestBody CompetitionRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(competitionService.creer(request));
     }
 
     @GetMapping("/{id}")
@@ -64,10 +65,10 @@ public class CompetitionController {
 
     @PostMapping("/{competitionId}/resultats")
     @PreAuthorize("hasAnyRole('ENSEIGNANT', 'PRESIDENT')")
-    public ResultatResponse ajouterResultat(
+    public ResponseEntity<ResultatResponse> ajouterResultat(
             @PathVariable String competitionId,
             @Valid @RequestBody ResultatRequest request) {
-        return competitionService.ajouterResultat(competitionId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(competitionService.ajouterResultat(competitionId, request));
     }
 
     @GetMapping("/{competitionId}/resultats")

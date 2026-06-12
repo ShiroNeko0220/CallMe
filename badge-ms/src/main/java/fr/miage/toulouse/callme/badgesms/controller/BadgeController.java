@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import java.util.List;
 
 @RestController
@@ -22,8 +24,8 @@ public class BadgeController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
-    public BadgeResponse creer(@Valid @RequestBody BadgeRequest badgeRequest) {
-        return service.creerBadge(badgeRequest);
+    public ResponseEntity<BadgeResponse> creer(@Valid @RequestBody BadgeRequest badgeRequest) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.creerBadge(badgeRequest));
     }
 
     @GetMapping

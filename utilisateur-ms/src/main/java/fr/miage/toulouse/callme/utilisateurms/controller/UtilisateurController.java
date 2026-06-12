@@ -6,6 +6,7 @@ import fr.miage.toulouse.callme.utilisateurms.DTO.UtilisateurCreationRequest;
 import fr.miage.toulouse.callme.utilisateurms.DTO.UtilisateurResponse;
 import fr.miage.toulouse.callme.utilisateurms.service.UtilisateurService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -28,8 +29,9 @@ public class UtilisateurController {
     }
 
     @PostMapping
-    public UtilisateurResponse creer(@Valid @RequestBody UtilisateurCreationRequest u) {
-        return service.creer(u);
+    @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
+    public ResponseEntity<UtilisateurResponse> creer(@Valid @RequestBody UtilisateurCreationRequest u) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.creer(u));
     }
 
     @GetMapping("/{id}")

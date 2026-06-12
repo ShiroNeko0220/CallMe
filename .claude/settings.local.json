@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npm create *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "PowerShell($body = '{\"titre\":\"Test Compet\",\"date\":\"2026-07-01\",\"heureDebut\":\"10:00:00\",\"duree\":60,\"niveauCible\":3,\"enseignantId\":4}'; try { $r = Invoke-RestMethod -Method POST -Uri \"http://localhost:8080/api/competitions\" -ContentType \"application/json\" -Headers @{\"X-Role\"=\"PRESIDENT\"} -Body $body; $r | ConvertTo-Json } catch { $_.Exception.Response.StatusCode.value__; $_.ErrorDetails.Message })"
     ]
   }
 }

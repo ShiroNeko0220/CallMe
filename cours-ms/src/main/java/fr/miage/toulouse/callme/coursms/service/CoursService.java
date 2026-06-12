@@ -56,7 +56,15 @@ public class CoursService {
         rabbitTemplate.convertAndSend(
             RabbitMQConfig.EXCHANGE,
             RabbitMQConfig.KEY_COURS,
-            Map.of("coursId", saved.getId(), "date", saved.getDate().toString(), "niveauCible", saved.getNiveauCible())
+            Map.of(
+                "id", saved.getId(),
+                "titre", saved.getTitre(),
+                "niveauCible", saved.getNiveauCible(),
+                "date", saved.getDate().toString(),
+                "heureDebut", saved.getHeureDebut().toString(),
+                "duree", saved.getDuree(),
+                "enseignantId", saved.getEnseignantId()
+            )
         );
 
         return toDTO(saved);

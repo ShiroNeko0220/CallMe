@@ -27,7 +27,6 @@ public class UtilisateurCreationRequest {
 
     private Role role;
 
-    @Min(1) @Max(5)
-    private int niveauExpertise;
+    private Integer niveauExpertise;
 
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Trophy, Calendar, MapPin } from 'lucide-react'
 import { api } from '../api'
-import { Card, Btn, Input, Alert } from '../components/Card'
+import { Card, Btn, Input, Alert, Spinner } from '../components/Card'
 
 const dateMin7 = () => {
   const d = new Date()
@@ -10,12 +10,14 @@ const dateMin7 = () => {
 }
 
 export default function CompetitionsView({ role }) {
-  const [competitions, setCompetitions] = useState([])
-  const [selected,     setSelected]     = useState(null)
-  const [resultats,    setResultats]     = useState([])
-  const [alert,        setAlert]         = useState(null)
-  const [showForm,     setShowForm]      = useState(false)
-  const [showResForm,  setShowResForm]   = useState(false)
+  const [competitions,     setCompetitions]     = useState([])
+  const [loading,          setLoading]          = useState(true)
+  const [loadingResultats, setLoadingResultats] = useState(false)
+  const [selected,         setSelected]         = useState(null)
+  const [resultats,        setResultats]        = useState([])
+  const [alert,            setAlert]            = useState(null)
+  const [showForm,         setShowForm]         = useState(false)
+  const [showResForm,      setShowResForm]      = useState(false)
   const [form, setForm] = useState({
     titre: '', niveauCible: 1, date: '', heureDebut: '',
     duree: 90, lieu: '', enseignantId: '',
@@ -25,29 +27,32 @@ export default function CompetitionsView({ role }) {
   useEffect(() => { charger() }, [])
 
   const charger = async () => {
+    setLoading(true)
     try {
       const res = await api.competitions.lister()
       setCompetitions(res.data)
     } catch (e) {
       setAlert({ type: 'error', message: 'Impossible de charger les compétitions. Veuillez réessayer.' })
+    } finally {
+      setLoading(false)
     }
   }
 
   const voirResultats = async (c) => {
     setSelected(c)
     setShowResForm(false)
+    setLoadingResultats(true)
     try {
       const res = await api.competitions.listerResultats(c.id)
       setResultats(res.data)
     } catch {
       setResultats([])
+    } finally {
+      setLoadingResultats(false)
     }
   }
 
   const creer = async () => {
-    if (!['ENSEIGNANT', 'PRESIDENT'].includes(role)) {
-      return setAlert({ type: 'error', message: 'Seuls les enseignants et le président peuvent créer une compétition.' })
-    }
     if (!form.titre.trim()) return setAlert({ type: 'error', message: 'Le titre de la compétition est obligatoire.' })
     if (!form.date) return setAlert({ type: 'error', message: 'La date est obligatoire (au moins 7 jours à l\'avance).' })
     if (!form.enseignantId) return setAlert({ type: 'error', message: 'Veuillez indiquer le numéro de l\'enseignant responsable.' })
@@ -63,9 +68,6 @@ export default function CompetitionsView({ role }) {
   }
 
   const ajouterResultat = async () => {
-    if (!['ENSEIGNANT', 'PRESIDENT'].includes(role)) {
-      return setAlert({ type: 'error', message: 'Seuls les enseignants et le président peuvent saisir un résultat.' })
-    }
     if (!resForm.eleveId) return setAlert({ type: 'error', message: 'Veuillez indiquer le numéro du membre.' })
     if (!resForm.enseignantId) return setAlert({ type: 'error', message: 'Veuillez indiquer le numéro de l\'enseignant.' })
     try {
@@ -93,7 +95,6 @@ export default function CompetitionsView({ role }) {
   }
 
   const supprimer = async (id) => {
-    if (role !== 'PRESIDENT') return setAlert({ type: 'error', message: 'Seul le président peut supprimer une compétition.' })
     if (!confirm('Supprimer cette compétition définitivement ?')) return
     try {
       await api.competitions.supprimer(id, role)
@@ -147,7 +148,7 @@ export default function CompetitionsView({ role }) {
 
       <div className="grid grid-cols-2 gap-4">
         <Card title={`${competitions.length} compétitions`} action={<Btn variant="outline" onClick={charger}>Actualiser</Btn>}>
-          <div className="space-y-2">
+          {loading ? <Spinner /> : <div className="space-y-2">
             {competitions.map(c => (
               <div key={c.id}
                 onClick={() => voirResultats(c)}
@@ -170,7 +171,7 @@ export default function CompetitionsView({ role }) {
               </div>
             ))}
             {competitions.length === 0 && <p className="text-gray-400 text-sm">Aucune compétition.</p>}
-          </div>
+          </div>}
         </Card>
 
         <Card
@@ -196,7 +197,7 @@ export default function CompetitionsView({ role }) {
             </div>
           )}
 
-          {resultats.length > 0 ? (
+          {loadingResultats ? <Spinner /> : resultats.length > 0 ? (
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-500 border-b">
@@ -219,7 +220,7 @@ export default function CompetitionsView({ role }) {
             <p className="text-gray-400 text-sm">Aucun résultat enregistré pour cette compétition.</p>
           ) : (
             <p className="text-gray-300 text-sm text-center py-6">Cliquez sur une compétition pour voir ses résultats</p>
-          )}
+          ) }
         </Card>
       </div>
     </div>

@@ -1,0 +1,52 @@
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lowerCaseServiceId: true
+      routes:
+        - id: utilisateur-ms
+          uri: lb://utilisateur-ms
+          predicates:
+            - Path=/api/utilisateurs/**
+          filters:
+            - RewritePath=/api/utilisateurs(?<seg>/?.*), /utilisateurs${seg}
+
+        - id: cours-ms
+          uri: lb://cours-ms
+          predicates:
+            - Path=/api/cours/**
+          filters:
+            - RewritePath=/api/cours(?<seg>/?.*), /cours${seg}
+
+        - id: competition-ms
+          uri: lb://competition-ms
+          predicates:
+            - Path=/api/competitions/**
+          filters:
+            - RewritePath=/api/competitions(?<seg>/?.*), /competitions${seg}
+
+        - id: badge-ms
+          uri: lb://badge-ms
+          predicates:
+            - Path=/api/badges/**
+          filters:
+            - RewritePath=/api/badges(?<seg>/?.*), /badges${seg}
+
+        - id: presence-ms
+          uri: lb://presence-ms
+          predicates:
+            - Path=/api/presences/**
+          filters:
+            - RewritePath=/api/presences(?<seg>/?.*), /presences${seg}
+
+        - id: statistiques-ms
+          uri: lb://statistiques-ms
+          predicates:
+            - Path=/api/statistiques/**
+          filters:
+            - RewritePath=/api/statistiques(?<seg>/?.*), /statistiques${seg}

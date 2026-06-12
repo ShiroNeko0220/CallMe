@@ -13,10 +13,17 @@ spring:
     openfeign:
       circuitbreaker:
         enabled: true
+    loadbalancer:
+      eager-load:
+        enabled: true
+        clients: utilisateur-ms
 
   data:
     mongodb:
       uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:root@localhost:27017/competition_db?authSource=admin}
+
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
 
 eureka:
   client:
@@ -28,6 +35,10 @@ eureka:
     prefer-ip-address: true
 
 resilience4j:
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 10s
   circuitbreaker:
     instances:
       utilisateur-ms:

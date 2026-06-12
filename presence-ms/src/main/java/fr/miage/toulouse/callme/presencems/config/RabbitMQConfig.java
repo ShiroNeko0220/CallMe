@@ -9,8 +9,9 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
 
-    public static final String EXCHANGE    = "callme.events";
-    public static final String QUEUE_COURS = "presence.cours";
+    public static final String EXCHANGE      = "callme.events";
+    public static final String QUEUE_COURS   = "presence.cours";
+    public static final String KEY_PRESENCE  = "presence.enregistree";
 
     @Bean
     public Queue queueCours() {

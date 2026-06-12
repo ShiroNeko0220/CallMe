@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Users, Star } from 'lucide-react'
 import { api } from '../api'
-import { Card, BadgeTag, Btn, Input, Alert } from '../components/Card'
+import { Card, BadgeTag, Btn, Input, Alert, Spinner } from '../components/Card'
 
 const ROLE_COLOR = { MEMBRE: 'blue', ENSEIGNANT: 'green', SECRETAIRE: 'amber', PRESIDENT: 'purple' }
 
@@ -55,7 +55,6 @@ export default function MembresView({ role }) {
   }
 
   const supprimer = async (id) => {
-    if (role !== 'PRESIDENT') return setAlert({ type: 'error', message: 'Seul le président peut supprimer un membre.' })
     if (!confirm('Supprimer ce membre définitivement ?')) return
     try {
       await api.utilisateurs.supprimer(id, role)
@@ -76,12 +75,14 @@ export default function MembresView({ role }) {
         <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
           <Users size={20} className="text-blue-600" /> Membres du club
         </h1>
-        <Btn onClick={() => setShowForm(!showForm)}>+ Nouveau membre</Btn>
+        {['SECRETAIRE', 'PRESIDENT'].includes(role) && (
+          <Btn onClick={() => setShowForm(!showForm)}>+ Nouveau membre</Btn>
+        )}
       </div>
 
       <Alert {...alert} onClose={() => setAlert(null)} />
 
-      {showForm && (
+      {showForm && ['SECRETAIRE', 'PRESIDENT'].includes(role) && (
         <Card title="Créer un nouveau membre">
           <p className="text-xs text-amber-600 mb-3">Note : le rôle et le niveau seront MEMBRE/1 par défaut (modifiable ensuite).</p>
           <div className="grid grid-cols-2 gap-x-4">
@@ -101,9 +102,7 @@ export default function MembresView({ role }) {
       )}
 
       <Card title={`${membres.length} membre(s)`} action={<Btn variant="outline" onClick={charger}>Actualiser</Btn>}>
-        {loading ? (
-          <p className="text-gray-400 text-sm">Chargement...</p>
-        ) : (
+        {loading ? <Spinner /> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

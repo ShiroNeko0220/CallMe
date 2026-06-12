@@ -1,20 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <!-- Body circle (head) -->
-  <circle cx="36" cy="10" r="5" fill="#2563eb"/>
-  <!-- Torso -->
-  <line x1="36" y1="15" x2="32" y2="30" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
-  <!-- Left arm raised -->
-  <line x1="32" y1="20" x2="18" y2="13" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
-  <!-- Right arm out -->
-  <line x1="32" y1="20" x2="44" y2="26" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
-  <!-- Left leg out (kick) -->
-  <line x1="32" y1="30" x2="20" y2="42" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
-  <line x1="20" y1="42" x2="12" y2="38" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
-  <!-- Right leg bend -->
-  <line x1="32" y1="30" x2="38" y2="44" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
-  <line x1="38" y1="44" x2="50" y2="50" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
-  <!-- Skirt / dress flair -->
-  <path d="M24 32 Q32 45 40 32" stroke="#93c5fd" stroke-width="2" fill="none" stroke-linecap="round"/>
-  <!-- Music note -->
-  <text x="4" y="20" font-size="14" fill="#bfdbfe" font-family="serif">♪</text>
+
+  <!-- HEAD -->
+  <circle cx="34" cy="10" r="5" fill="#2563eb"/>
+
+  <!-- BODY (slight motion lean) -->
+  <line x1="34" y1="15" x2="30" y2="30"
+        stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- ARMS (dynamic pose) -->
+  <line x1="30" y1="20" x2="18" y2="14"
+        stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+
+  <line x1="32" y1="20" x2="46" y2="26"
+        stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- LEGS (step pose) -->
+  <line x1="30" y1="30" x2="22" y2="46"
+        stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+
+  <line x1="30" y1="30" x2="42" y2="42"
+        stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- MUSIC NOTES (added second note for rhythm) -->
+  <text x="6" y="18" font-size="14" fill="#2563eb">♪</text>
+  <text x="52" y="14" font-size="12" fill="#2563eb">♪</text>
+
 </svg>

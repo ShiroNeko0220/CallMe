@@ -5,14 +5,25 @@ spring:
   application:
     name: statistiques-ms
 
-  mvc:
-    pathmatch:
-      matching-strategy: ant_path_matcher
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
 
-  cloud:
-    openfeign:
-      circuitbreaker:
-        enabled: true
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3311/statistiques_db}
+    username: ${SPRING_DATASOURCE_USERNAME:user}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: 5672
+    username: guest
+    password: guest
 
 eureka:
   client:
@@ -22,26 +33,6 @@ eureka:
     fetch-registry: true
   instance:
     prefer-ip-address: true
-
-resilience4j:
-  circuitbreaker:
-    instances:
-      utilisateur-ms:
-        sliding-window-size: 5
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 10s
-      cours-ms:
-        sliding-window-size: 5
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 10s
-      presence-ms:
-        sliding-window-size: 5
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 10s
-      competition-ms:
-        sliding-window-size: 5
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 10s
 
 management:
   endpoints:

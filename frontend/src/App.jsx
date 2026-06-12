@@ -16,12 +16,12 @@ const ROLE_COLORS = {
 }
 
 const NAV = [
-  { key: 'membres',      label: 'Membres',      Icon: Users },
-  { key: 'cours',        label: 'Cours',         Icon: BookOpen },
-  { key: 'competitions', label: 'Compétitions',  Icon: Trophy },
-  { key: 'badges',       label: 'Badges',        Icon: CreditCard },
-  { key: 'presences',    label: 'Présences',     Icon: CheckSquare },
-  { key: 'statistiques', label: 'Statistiques',  Icon: BarChart2 },
+  { key: 'membres',      label: 'Membres',      Icon: Users,        roles: ['MEMBRE', 'ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT'] },
+  { key: 'cours',        label: 'Cours',         Icon: BookOpen,     roles: ['MEMBRE', 'ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT'] },
+  { key: 'competitions', label: 'Compétitions',  Icon: Trophy,       roles: ['MEMBRE', 'ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT'] },
+  { key: 'badges',       label: 'Badges',        Icon: CreditCard,   roles: ['SECRETAIRE', 'PRESIDENT'] },
+  { key: 'presences',    label: 'Présences',     Icon: CheckSquare,  roles: ['MEMBRE', 'ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT'] },
+  { key: 'statistiques', label: 'Statistiques',  Icon: BarChart2,    roles: ['PRESIDENT'] },
 ]
 
 export default function App() {
@@ -33,6 +33,8 @@ export default function App() {
   }
 
   const role = user.role
+  const visibleNav = NAV.filter(({ roles }) => roles.includes(role))
+  const activeSection = visibleNav.find(n => n.key === section) ? section : visibleNav[0]?.key
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -42,7 +44,7 @@ export default function App() {
           <img src="/logo.svg" alt="Oduru" className="h-9 w-9" />
           <div>
             <span className="text-2xl font-bold text-blue-600">Oduru</span>
-            <span className="text-sm text-gray-400 ml-2">Club de danse rythmique</span>
+            <span className="text-sm text-gray-400 ml-2">Club de danse</span>
           </div>
         </div>
 
@@ -65,37 +67,30 @@ export default function App() {
 
       <div className="flex">
         <nav className="w-52 min-h-screen bg-white border-r border-gray-200 pt-4 shrink-0">
-          {NAV.map(({ key, label, Icon }) => (
+          {visibleNav.map(({ key, label, Icon }) => (
             <button
               key={key}
               onClick={() => setSection(key)}
               className={`w-full text-left px-5 py-3 text-sm transition-colors cursor-pointer flex items-center gap-2.5 ${
-                section === key
+                activeSection === key
                   ? 'bg-blue-50 text-blue-700 font-medium border-r-2 border-blue-500'
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
-              <Icon size={16} className={section === key ? 'text-blue-600' : 'text-gray-400'} />
+              <Icon size={16} className={activeSection === key ? 'text-blue-600' : 'text-gray-400'} />
               {label}
             </button>
           ))}
 
-          <div className="mt-6 mx-3 p-3 bg-gray-50 rounded-lg text-xs text-gray-500">
-            <div className="font-medium mb-1">Accès selon rôle :</div>
-            <div>MEMBRE → lecture</div>
-            <div>ENSEIGNANT → cours, compéts</div>
-            <div>SECRETAIRE → badges, membres</div>
-            <div>PRESIDENT → tout</div>
-          </div>
         </nav>
 
         <main className="flex-1 p-6 min-w-0">
-          {section === 'membres'      && <MembresView      role={role} />}
-          {section === 'cours'        && <CoursView        role={role} />}
-          {section === 'competitions' && <CompetitionsView role={role} />}
-          {section === 'badges'       && <BadgesView       role={role} />}
-          {section === 'presences'    && <PresencesView    role={role} />}
-          {section === 'statistiques' && <StatistiquesView role={role} />}
+          {activeSection === 'membres'      && <MembresView      role={role} />}
+          {activeSection === 'cours'        && <CoursView        role={role} />}
+          {activeSection === 'competitions' && <CompetitionsView role={role} />}
+          {activeSection === 'badges'       && <BadgesView       role={role} />}
+          {activeSection === 'presences'    && <PresencesView    role={role} />}
+          {activeSection === 'statistiques' && <StatistiquesView role={role} />}
         </main>
       </div>
     </div>

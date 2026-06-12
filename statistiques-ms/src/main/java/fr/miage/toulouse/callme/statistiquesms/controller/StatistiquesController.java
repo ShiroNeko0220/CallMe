@@ -1,7 +1,6 @@
 package fr.miage.toulouse.callme.statistiquesms.controller;
 
 import fr.miage.toulouse.callme.statistiquesms.DTO.*;
-import fr.miage.toulouse.callme.statistiquesms.clients.*;
 import fr.miage.toulouse.callme.statistiquesms.service.StatistiquesService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,7 +27,7 @@ public class StatistiquesController {
 
     @GetMapping("/cours/{idCours}/eleves")
     @PreAuthorize("hasRole('PRESIDENT')")
-    public List<PresenceClient.PresenceResponse> elevesPresentsCours(@PathVariable Long idCours) {
+    public List<PresenceStatResponse> elevesPresentsCours(@PathVariable Long idCours) {
         return service.elevesPresentsCours(idCours);
     }
 
@@ -49,7 +48,7 @@ public class StatistiquesController {
 
     @GetMapping("/eleves/{eleveId}/competitions")
     @PreAuthorize("hasRole('PRESIDENT')")
-    public List<CompetitionClient.ResultatResponse> resultatsCompetitionEleve(
+    public List<ResultatStatResponse> resultatsCompetitionEleve(
             @PathVariable Long eleveId,
             @RequestParam(value = "debut", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate debut,
             @RequestParam(value = "fin", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {

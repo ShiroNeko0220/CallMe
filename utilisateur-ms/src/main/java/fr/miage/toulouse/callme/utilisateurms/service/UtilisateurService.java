@@ -4,21 +4,29 @@ import fr.miage.toulouse.callme.libcommun.ApiException;
 import fr.miage.toulouse.callme.utilisateurms.DTO.UpdateUtilisateurRequest;
 import fr.miage.toulouse.callme.utilisateurms.DTO.UtilisateurCreationRequest;
 import fr.miage.toulouse.callme.utilisateurms.DTO.UtilisateurResponse;
+import fr.miage.toulouse.callme.utilisateurms.config.RabbitMQConfig;
 import fr.miage.toulouse.callme.utilisateurms.entity.Adresse;
 import fr.miage.toulouse.callme.utilisateurms.entity.Utilisateur;
 import fr.miage.toulouse.callme.utilisateurms.enums.Role;
 import fr.miage.toulouse.callme.utilisateurms.repository.UtilisateurRepository;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class UtilisateurService {
     private final UtilisateurRepository repo;
+    private final BCryptPasswordEncoder passwordEncoder;
+    private final RabbitTemplate rabbitTemplate;
 
-    public UtilisateurService(UtilisateurRepository repo) {
+    public UtilisateurService(UtilisateurRepository repo, BCryptPasswordEncoder passwordEncoder, RabbitTemplate rabbitTemplate) {
         this.repo = repo;
+        this.passwordEncoder = passwordEncoder;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     public UtilisateurResponse creer(UtilisateurCreationRequest request) {
@@ -29,11 +37,14 @@ public class UtilisateurService {
         u.setNom(request.getNom());
         u.setPrenom(request.getPrenom());
         u.setEmail(request.getEmail());
+        request.getIdConnexion().setMdp(passwordEncoder.encode(request.getIdConnexion().getMdp()));
         u.setIdConnexion(request.getIdConnexion());
         u.setAdresse(request.getAdresse());
         u.setRole(request.getRole() != null ? request.getRole() : Role.MEMBRE);
-        u.setNiveauExpertise(request.getNiveauExpertise() > 0 ? request.getNiveauExpertise() : 1);
-        return toDTO(repo.save(u));
+        u.setNiveauExpertise(request.getNiveauExpertise() != null && request.getNiveauExpertise() > 0 ? request.getNiveauExpertise() : 1);
+        Utilisateur saved = repo.save(u);
+        publishUtilisateur(saved);
+        return toDTO(saved);
     }
 
     private Utilisateur findById(Long id) {
@@ -61,7 +72,21 @@ public class UtilisateurService {
             if (request.getPays()  != null) u.getAdresse().setPays(request.getPays());
         }
 
-        return toDTO(repo.save(u));
+        if (request.getNiveauExpertise() != null) u.setNiveauExpertise(request.getNiveauExpertise());
+        if (request.getRole() != null)            u.setRole(request.getRole());
+
+        Utilisateur saved = repo.save(u);
+        publishUtilisateur(saved);
+        return toDTO(saved);
+    }
+
+    private void publishUtilisateur(Utilisateur u) {
+        try {
+            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.KEY_UTILISATEUR,
+                    Map.of("id", u.getId(), "niveauExpertise", u.getNiveauExpertise()));
+        } catch (Exception e) {
+            // non-bloquant : la statistique sera éventuellement cohérente
+        }
     }
 
     private UtilisateurResponse toDTO(Utilisateur u) {
@@ -105,7 +130,7 @@ public class UtilisateurService {
     public UtilisateurResponse login(String login, String mdp) {
         Utilisateur u = repo.findByIdConnexionLogin(login)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Identifiants incorrects"));
-        if (!u.getIdConnexion().getMdp().equals(mdp)) {
+        if (!passwordEncoder.matches(mdp, u.getIdConnexion().getMdp())) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Identifiants incorrects");
         }
         return toDTO(u);

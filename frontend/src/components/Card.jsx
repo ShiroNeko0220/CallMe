@@ -1,3 +1,11 @@
+export function Spinner() {
+  return (
+    <div className="flex justify-center items-center py-8">
+      <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+    </div>
+  )
+}
+
 export function Card({ title, children, action }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-5">

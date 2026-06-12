@@ -21,15 +21,16 @@ CREATE TABLE IF NOT EXISTS utilisateur (
     UNIQUE KEY uk_utilisateur_login (login)
 );
 
+-- Mots de passe haches BCrypt (valeur en clair : password)
 INSERT INTO utilisateur(id, nom, prenom, email, login, mot_de_passe, ville, pays, niveau_expertise, role)
 VALUES
-    (1,  'Test',  'TestN',  'presidente@callme.fr',   'presidente',  'password', 'Toulouse',    'France', 5, 'PRESIDENT'),
-    (2,  'Test',  'Sophie',  'secretaire@callme.fr',   'secretaire',  'password', 'Toulouse',    'France', 4, 'SECRETAIRE'),
-    (3,  'Nguyen',  'Anh',     'enseignant3@callme.fr',  'enseignant3', 'password', 'Paris',  'France', 3, 'ENSEIGNANT'),
-    (4,  'Banner', 'Bruce',     'enseignant5@callme.fr',  'enseignant5', 'password', 'Toulouse',     'France', 5, 'ENSEIGNANT'),
-    (5,  'Van',   'Doom',    'membre1@callme.fr',      'membre1',     'password', 'Toulouse',    'France', 1, 'MEMBRE'),
-    (6,  'Robert',  'DJ',    'membre2@callme.fr',      'membre2',     'password', 'Toulouse',   'France', 2, 'MEMBRE'),
-    (7,  'Parker',  'Peter',    'membre3@callme.fr',      'membre3',     'password', 'Toulouse',    'France', 3, 'MEMBRE'),
-    (8,  'Bruce',   'Wayne',    'membre4@callme.fr',      'membre4',     'password', 'Toulouse',       'France', 4, 'MEMBRE'),
-    (9,  'Barry',  'Allen',    'membre5@callme.fr',      'membre5',     'password', 'Toulouse',       'France', 5, 'MEMBRE'),
-    (10, 'Queen',  'Oliver',    'membre3b@callme.fr',     'membre3b',    'password', 'Toulouse',    'France', 3, 'MEMBRE');
+    (1,  'Test',   'TestN',  'presidente@callme.fr',  'presidente',  '$2a$10$CxntK.NxelIKFeKPCF9Dgu7kRSVeXAN7rDYeST5Mj4cCFzGNrkOFO', 'Toulouse', 'France', 5, 'PRESIDENT'),
+    (2,  'Test',   'Sophie', 'secretaire@callme.fr',  'secretaire',  '$2a$10$CxntK.NxelIKFeKPCF9Dgu7kRSVeXAN7rDYeST5Mj4cCFzGNrkOFO', 'Toulouse', 'France', 4, 'SECRETAIRE'),
+    (3,  'Nguyen', 'Anh',    'enseignant3@callme.fr', 'enseignant3', '$2a$10$CxntK.NxelIKFeKPCF9Dgu7kRSVeXAN7rDYeST5Mj4cCFzGNrkOFO', 'Paris',    'France', 3, 'ENSEIGNANT'),
+    (4,  'Banner', 'Bruce',  'enseignant5@callme.fr', 'enseignant5', '$2a$10$CxntK.NxelIKFeKPCF9Dgu7kRSVeXAN7rDYeST5Mj4cCFzGNrkOFO', 'Toulouse', 'France', 5, 'ENSEIGNANT'),
+    (5,  'Van',    'Doom',   'membre1@callme.fr',     'membre1',     '$2a$10$CxntK.NxelIKFeKPCF9Dgu7kRSVeXAN7rDYeST5Mj4cCFzGNrkOFO', 'Toulouse', 'France', 1, 'MEMBRE'),
+    (6,  'Robert', 'DJ',     'membre2@callme.fr',     'membre2',     '$2a$10$CxntK.NxelIKFeKPCF9Dgu7kRSVeXAN7rDYeST5Mj4cCFzGNrkOFO', 'Toulouse', 'France', 2, 'MEMBRE'),
+    (7,  'Parker', 'Peter',  'membre3@callme.fr',     'membre3',     '$2a$10$CxntK.NxelIKFeKPCF9Dgu7kRSVeXAN7rDYeST5Mj4cCFzGNrkOFO', 'Toulouse', 'France', 3, 'MEMBRE'),
+    (8,  'Bruce',  'Wayne',  'membre4@callme.fr',     'membre4',     '$2a$10$CxntK.NxelIKFeKPCF9Dgu7kRSVeXAN7rDYeST5Mj4cCFzGNrkOFO', 'Toulouse', 'France', 4, 'MEMBRE'),
+    (9,  'Barry',  'Allen',  'membre5@callme.fr',     'membre5',     '$2a$10$CxntK.NxelIKFeKPCF9Dgu7kRSVeXAN7rDYeST5Mj4cCFzGNrkOFO', 'Toulouse', 'France', 5, 'MEMBRE'),
+    (10, 'Queen',  'Oliver', 'membre3b@callme.fr',    'membre3b',    '$2a$10$CxntK.NxelIKFeKPCF9Dgu7kRSVeXAN7rDYeST5Mj4cCFzGNrkOFO', 'Toulouse', 'France', 3, 'MEMBRE');

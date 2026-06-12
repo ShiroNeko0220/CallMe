@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BookOpen, Calendar, Clock, Timer, MapPin } from 'lucide-react'
 import { api } from '../api'
-import { Card, Btn, Input, Alert } from '../components/Card'
+import { Card, Btn, Input, Alert, Spinner } from '../components/Card'
 
 const dateMin7 = () => {
   const d = new Date()
@@ -11,6 +11,7 @@ const dateMin7 = () => {
 
 export default function CoursView({ role }) {
   const [cours,        setCours]        = useState([])
+  const [loading,      setLoading]      = useState(true)
   const [alert,        setAlert]        = useState(null)
   const [showForm,     setShowForm]     = useState(false)
   const [filtreNiveau, setFiltreNiveau] = useState('')
@@ -22,6 +23,7 @@ export default function CoursView({ role }) {
   useEffect(() => { charger() }, [])
 
   const charger = async (niveau = filtreNiveau) => {
+    setLoading(true)
     try {
       const res = niveau
         ? await api.cours.listerParNiveau(niveau)
@@ -29,13 +31,12 @@ export default function CoursView({ role }) {
       setCours(res.data)
     } catch (e) {
       setAlert({ type: 'error', message: 'Impossible de charger les cours. Veuillez réessayer.' })
+    } finally {
+      setLoading(false)
     }
   }
 
   const creer = async () => {
-    if (!['SECRETAIRE', 'PRESIDENT'].includes(role)) {
-      return setAlert({ type: 'error', message: 'Seuls la secrétaire et le président peuvent créer un cours.' })
-    }
     if (!form.titre.trim()) return setAlert({ type: 'error', message: 'Le titre du cours est obligatoire.' })
     if (!form.date) return setAlert({ type: 'error', message: 'La date du cours est obligatoire (au moins 7 jours à l\'avance).' })
     if (!form.enseignantId) return setAlert({ type: 'error', message: 'Veuillez indiquer le numéro de l\'enseignant responsable.' })
@@ -51,7 +52,6 @@ export default function CoursView({ role }) {
   }
 
   const supprimer = async (id) => {
-    if (role !== 'PRESIDENT') return setAlert({ type: 'error', message: 'Seul le président peut supprimer un cours.' })
     if (!confirm('Supprimer ce cours définitivement ?')) return
     try {
       await api.cours.supprimer(id, role)
@@ -104,7 +104,7 @@ export default function CoursView({ role }) {
             <Input label="Titre" value={form.titre} onChange={e => f('titre', e.target.value)} placeholder="ex. Salsa débutant" />
             <Input label="Date (au moins 7 jours à l'avance)" value={form.date} onChange={e => f('date', e.target.value)} type="date" min={dateMin7()} />
             <Input label="Heure de début" value={form.heureDebut} onChange={e => f('heureDebut', e.target.value)} type="time" />
-            <Input label="Durée en minutes (45 min minimum)" value={form.duree} onChange={e => f('duree', Number(e.target.value))} type="number" min="45" />
+            <Input label="Durée en minutes (45 min minimum)" value={form.duree} onChange={e => f('duree', Math.max(45, Number(e.target.value)))} type="number" min="45" />
             <Input label="Lieu" value={form.lieu} onChange={e => f('lieu', e.target.value)} placeholder="ex. Salle A" />
             <Input label="Numéro de l'enseignant" value={form.enseignantId} onChange={e => f('enseignantId', Number(e.target.value))} type="number" min="1" placeholder="ex. 3" />
             <div className="mb-3">
@@ -123,7 +123,7 @@ export default function CoursView({ role }) {
       )}
 
       <Card title={`${cours.length} cours`} action={<Btn variant="outline" onClick={() => charger()}>Actualiser</Btn>}>
-        <div className="space-y-3">
+        {loading ? <Spinner /> : <div className="space-y-3">
           {cours.map(c => (
             <div key={c.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div>
@@ -144,7 +144,7 @@ export default function CoursView({ role }) {
             </div>
           ))}
           {cours.length === 0 && <p className="text-gray-400 text-sm text-center py-4">Aucun cours trouvé.</p>}
-        </div>
+        </div>}
       </Card>
     </div>
   )

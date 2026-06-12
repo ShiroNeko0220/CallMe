@@ -96,6 +96,29 @@ services:
       retries: 30
       start_period: 40s
 
+  mysql-statistiques:
+    image: mysql:8.4
+    container_name: mysql-statistiques
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: statistiques_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3311:3306"
+    volumes:
+      - mysql-statistiques-data:/var/lib/mysql
+      - ./data-init/mysql-init/statistiques-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - callme-backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
   callme-mongodb:
     image: mongo:7
     container_name: callme-mongodb
@@ -184,6 +207,30 @@ services:
       - callme-backend
     restart: unless-stopped
 
+  # ── Config Server ─────────────────────────────────────────────────────────
+
+  callme-config-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULE: config-server
+    image: callme-config-server:1.0.0
+    container_name: callme-config-server
+    depends_on:
+      callme-eureka:
+        condition: service_started
+    ports:
+      - "8888:8888"
+    environment:
+      SERVER_PORT: 8888
+      CONFIG_SERVER_URL: http://callme-config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,env,refresh
+    networks:
+      - callme-backend
+    restart: unless-stopped
+
   # ── API Gateway ───────────────────────────────────────────────────────────
 
   callme-gateway:
@@ -200,6 +247,7 @@ services:
       callme-eureka:
         condition: service_started
     environment:
+      CONFIG_SERVER_URL: http://callme-config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
     networks:
       - callme-backend
@@ -220,6 +268,8 @@ services:
         condition: service_started
       mysql-utilisateur:
         condition: service_healthy
+      callme-rabbitmq:
+        condition: service_healthy
       callme-zipkin:
         condition: service_started
     ports:
@@ -229,6 +279,9 @@ services:
       SPRING_DATASOURCE_USERNAME: user
       SPRING_DATASOURCE_PASSWORD: password
 
+      SPRING_RABBITMQ_HOST: callme-rabbitmq
+
+      CONFIG_SERVER_URL: http://callme-config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
 
 
@@ -268,6 +321,7 @@ services:
 
       SPRING_RABBITMQ_HOST: callme-rabbitmq
 
+      CONFIG_SERVER_URL: http://callme-config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
 
 
@@ -292,6 +346,8 @@ services:
         condition: service_started
       callme-mongodb:
         condition: service_healthy
+      callme-rabbitmq:
+        condition: service_healthy
       utilisateur-ms:
         condition: service_started
       callme-zipkin:
@@ -301,6 +357,9 @@ services:
     environment:
       SPRING_DATA_MONGODB_URI: mongodb://root:root@callme-mongodb:27017/competition_db?authSource=admin
 
+      SPRING_RABBITMQ_HOST: callme-rabbitmq
+
+      CONFIG_SERVER_URL: http://callme-config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
 
 
@@ -336,6 +395,7 @@ services:
       SPRING_DATASOURCE_USERNAME: user
       SPRING_DATASOURCE_PASSWORD: password
 
+      CONFIG_SERVER_URL: http://callme-config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
 
 
@@ -379,6 +439,7 @@ services:
 
       SPRING_RABBITMQ_HOST: callme-rabbitmq
 
+      CONFIG_SERVER_URL: http://callme-config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
 
 
@@ -401,21 +462,23 @@ services:
     depends_on:
       callme-eureka:
         condition: service_started
-      utilisateur-ms:
-        condition: service_started
-      cours-ms:
-        condition: service_started
-      competition-ms:
-        condition: service_started
-      presence-ms:
-        condition: service_started
+      mysql-statistiques:
+        condition: service_healthy
+      callme-rabbitmq:
+        condition: service_healthy
       callme-zipkin:
         condition: service_started
     ports:
       - "8086:8086"
     environment:
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-statistiques:3306/statistiques_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
 
+      SPRING_RABBITMQ_HOST: callme-rabbitmq
+
+      CONFIG_SERVER_URL: http://callme-config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
 
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
       MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
@@ -448,4 +511,5 @@ volumes:
   mysql-cours-data:
   mysql-badge-data:
   mysql-presence-data:
+  mysql-statistiques-data:
   callme-mongodb-data:

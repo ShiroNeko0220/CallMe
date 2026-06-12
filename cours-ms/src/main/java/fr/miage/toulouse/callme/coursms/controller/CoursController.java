@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
 @RestController
 @RequestMapping("/cours")
 public class CoursController {
@@ -21,8 +24,8 @@ public class CoursController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
-    public CoursResponse creer(@Valid @RequestBody CoursRequest request) {
-        return service.creer(request);
+    public ResponseEntity<CoursResponse> creer(@Valid @RequestBody CoursRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.creer(request));
     }
 
     @GetMapping("/{id}")
@@ -53,7 +56,8 @@ public class CoursController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('PRESIDENT')")
-    public void supprimer(@PathVariable Long id) {
+    public ResponseEntity<Void> supprimer(@PathVariable Long id) {
         service.supprimer(id);
+        return ResponseEntity.noContent().build();
     }
 }

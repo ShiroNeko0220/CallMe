@@ -1,5 +1,8 @@
 package fr.miage.toulouse.callme.presencems.controller;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
 import fr.miage.toulouse.callme.presencems.DTO.BadgeageRequest;
 import fr.miage.toulouse.callme.presencems.DTO.PresenceResponse;
 import fr.miage.toulouse.callme.presencems.service.PresenceService;
@@ -23,8 +26,8 @@ public class PresenceController {
     }
 
     @PostMapping("/badger")
-    public PresenceResponse badger(@Valid @RequestBody BadgeageRequest request) {
-        return service.badger(request);
+    public ResponseEntity<PresenceResponse> badger(@Valid @RequestBody BadgeageRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.badger(request));
     }
 
     @GetMapping

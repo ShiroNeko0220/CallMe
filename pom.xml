@@ -12,6 +12,7 @@
     <modules>
         <module>lib-commun</module>
         <module>eureka-server</module>
+        <module>config-server</module>
         <module>utilisateur-ms</module>
         <module>cours-ms</module>
         <module>competition-ms</module>

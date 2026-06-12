@@ -31,6 +31,12 @@ public class UtilisateurServiceTest {
     @Mock
     private UtilisateurRepository repo;
 
+    @Mock
+    private org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder passwordEncoder;
+
+    @Mock
+    private org.springframework.amqp.rabbit.core.RabbitTemplate rabbitTemplate;
+
     @InjectMocks
     private UtilisateurService service;
 
@@ -85,6 +91,7 @@ public class UtilisateurServiceTest {
     @Test
     void creer_utilisateurNonExistant() {
         when(repo.existsByIdConnexionLogin("test_login")).thenReturn(false);
+        when(passwordEncoder.encode(any())).thenReturn("$2a$hashed");
         when(repo.save(any(Utilisateur.class))).thenAnswer(invocation -> {
             Utilisateur u = invocation.getArgument(0);
             u.setId(1L);
@@ -160,7 +167,7 @@ public class UtilisateurServiceTest {
     @Test
     void modifier_utilisateurNonExistant() {
         when(repo.findById(99L)).thenReturn(Optional.empty());
-        UpdateUtilisateurRequest update = new UpdateUtilisateurRequest("NouveauNom", "NouveauPrenom", "nouveau@test.com", "Paris", "France");
+        UpdateUtilisateurRequest update = new UpdateUtilisateurRequest("NouveauNom", "NouveauPrenom", "nouveau@test.com", "Paris", "France", null, null);
 
         assertThatThrownBy(() -> service.modifier(99L, update))
                 .isInstanceOf(ApiException.class)
@@ -174,7 +181,7 @@ public class UtilisateurServiceTest {
     void modifier_utilisateurExistant() {
         when(repo.findById(1L)).thenReturn(Optional.of(u1));
         when(repo.save(any(Utilisateur.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        UpdateUtilisateurRequest update = new UpdateUtilisateurRequest("NouveauNom", "NouveauPrenom", "nouveau@test.com", "Lyon", "France");
+        UpdateUtilisateurRequest update = new UpdateUtilisateurRequest("NouveauNom", "NouveauPrenom", "nouveau@test.com", "Lyon", "France", null, null);
 
         UtilisateurResponse resultat = service.modifier(1L, update);
 

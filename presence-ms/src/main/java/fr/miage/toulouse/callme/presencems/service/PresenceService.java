@@ -4,8 +4,10 @@ import fr.miage.toulouse.callme.libcommun.ApiException;
 import fr.miage.toulouse.callme.presencems.DTO.BadgeageRequest;
 import fr.miage.toulouse.callme.presencems.DTO.PresenceResponse;
 import fr.miage.toulouse.callme.presencems.clients.*;
+import fr.miage.toulouse.callme.presencems.config.RabbitMQConfig;
 import fr.miage.toulouse.callme.presencems.entity.Presence;
 import fr.miage.toulouse.callme.presencems.repository.PresenceRepository;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,12 +25,15 @@ public class PresenceService {
     private final BadgeClient badgeClient;
     private final CoursClient coursClient;
     private final UtilisateurClient utilisateurClient;
+    private final RabbitTemplate rabbitTemplate;
 
-    public PresenceService(PresenceRepository repository, BadgeClient badgeClient, CoursClient coursClient, UtilisateurClient utilisateurClient) {
+    public PresenceService(PresenceRepository repository, BadgeClient badgeClient, CoursClient coursClient,
+                           UtilisateurClient utilisateurClient, RabbitTemplate rabbitTemplate) {
         this.repository = repository;
         this.badgeClient = badgeClient;
         this.coursClient = coursClient;
         this.utilisateurClient = utilisateurClient;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     @Transactional
@@ -55,7 +60,16 @@ public class PresenceService {
         presence.setIdPorteur(badge.getIdPorteur());
         presence.setIdCours(cours.getId());
         presence.setDateBadgeage(LocalDateTime.now());
-        return toDTO(repository.save(presence));
+        Presence saved = repository.save(presence);
+
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, "presence.enregistree", Map.of(
+                "id", saved.getIdPresence(),
+                "idPorteur", saved.getIdPorteur(),
+                "idCours", saved.getIdCours(),
+                "dateBadgeage", saved.getDateBadgeage().toString()
+        ));
+
+        return toDTO(saved);
     }
 
     @Transactional(readOnly = true)

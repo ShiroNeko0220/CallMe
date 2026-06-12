@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckSquare, Smartphone, AlertTriangle } from 'lucide-react'
+import { CheckSquare, Smartphone } from 'lucide-react'
 import { api } from '../api'
 import { Card, Btn, Input, Alert } from '../components/Card'
 
@@ -79,30 +79,29 @@ export default function PresencesView({ role }) {
         </div>
       </Card>
 
-      <Card title="Consulter les présences">
-        <div className="flex items-center gap-3 mb-4 flex-wrap">
-          {['cours', 'eleve'].map(t => (
-            <button key={t} onClick={() => { setFiltreType(t); setFiltreId(''); setPresences([]) }}
-              className={`text-sm px-3 py-1 rounded-full border transition-colors cursor-pointer ${
-                filtreType === t
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'border-gray-300 hover:bg-gray-50 text-gray-600'
-              }`}
-            >
-              {t === 'eleve' ? 'Par membre' : 'Par cours'}
-            </button>
-          ))}
-          <Input
-            value={filtreId}
-            onChange={e => setFiltreId(e.target.value)}
-            placeholder={filtreType === 'eleve' ? 'Numéro du membre' : 'Numéro du cours'}
-            type="number"
-            min="1"
-          />
-          <Btn size="sm" onClick={charger}>Chercher</Btn>
-        </div>
-
-        {['ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT'].includes(role) ? (
+      {['ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT'].includes(role) && (
+        <Card title="Consulter les présences">
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            {['cours', 'eleve'].map(t => (
+              <button key={t} onClick={() => { setFiltreType(t); setFiltreId(''); setPresences([]) }}
+                className={`text-sm px-3 py-1 rounded-full border transition-colors cursor-pointer ${
+                  filtreType === t
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'border-gray-300 hover:bg-gray-50 text-gray-600'
+                }`}
+              >
+                {t === 'eleve' ? 'Par membre' : 'Par cours'}
+              </button>
+            ))}
+            <Input
+              value={filtreId}
+              onChange={e => setFiltreId(e.target.value)}
+              placeholder={filtreType === 'eleve' ? 'Numéro du membre' : 'Numéro du cours'}
+              type="number"
+              min="1"
+            />
+            <Btn size="sm" onClick={charger}>Chercher</Btn>
+          </div>
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-gray-500 border-b">
@@ -132,12 +131,8 @@ export default function PresencesView({ role }) {
               )}
             </tbody>
           </table>
-        ) : (
-          <p className="text-amber-600 text-sm flex items-center gap-2">
-            <AlertTriangle size={15} /> La consultation des présences est réservée aux enseignants et à l'administration.
-          </p>
-        )}
-      </Card>
+        </Card>
+      )}
     </div>
   )
 }

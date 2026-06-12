@@ -34,7 +34,7 @@ public class GlobalExceptionHandler {
         String name = e.getClass().getSimpleName();
         if (name.startsWith("FeignException") || name.startsWith("RetryableException")
                 || name.equals("NoFallbackAvailableException")) {
-            log.warn("Feign call failed: {}", e.getMessage());
+            log.warn("Feign call failed: {} | cause: {}", e.getMessage(), e.getCause() != null ? e.getCause().getMessage() : "none");
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .body(Map.of("error", "Un service est temporairement indisponible. Veuillez réessayer dans quelques instants."));
         }

@@ -22,9 +22,6 @@ export default function BadgesView({ role }) {
   }
 
   const creerBadge = async () => {
-    if (!['SECRETAIRE', 'PRESIDENT'].includes(role)) {
-      return setAlert({ type: 'error', message: 'Seuls la secrétaire et le président peuvent créer un badge.' })
-    }
     try {
       await api.badges.creer(role)
       setAlert({ type: 'success', message: 'Badge créé. Il est maintenant disponible pour être associé à un membre.' })
@@ -35,9 +32,6 @@ export default function BadgesView({ role }) {
   }
 
   const associer = async () => {
-    if (!['SECRETAIRE', 'PRESIDENT'].includes(role)) {
-      return setAlert({ type: 'error', message: 'Seuls la secrétaire et le président peuvent associer un badge.' })
-    }
     if (!assocForm.idBadge) return setAlert({ type: 'error', message: 'Veuillez saisir le numéro du badge.' })
     if (!assocForm.idPorteur) return setAlert({ type: 'error', message: 'Veuillez saisir le numéro du membre.' })
     try {
@@ -59,9 +53,6 @@ export default function BadgesView({ role }) {
   }
 
   const dissocier = async (idBadge) => {
-    if (!['SECRETAIRE', 'PRESIDENT'].includes(role)) {
-      return setAlert({ type: 'error', message: 'Seuls la secrétaire et le président peuvent dissocier un badge.' })
-    }
     try {
       await api.badges.dissocier(idBadge, role)
       setAlert({ type: 'success', message: 'Badge dissocié. Il est de nouveau disponible.' })
