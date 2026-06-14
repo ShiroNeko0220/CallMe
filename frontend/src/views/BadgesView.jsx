@@ -1,18 +1,23 @@
-import { useState, useEffect } from 'react'
-import { CreditCard } from 'lucide-react'
+﻿import { useState, useEffect } from 'react'
+import { CreditCard, Trash2, RefreshCw } from 'lucide-react'
 import { api } from '../api'
 import { Card, BadgeTag, Btn, Input, Alert, Spinner, ConfirmModal } from '../components/Card'
 
 const STATUT_COLOR = { ASSOCIE: 'green', DISPONIBLE: 'blue', PERDU: 'red', DESACTIVE: 'gray' }
+const selectCls = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
 
 export default function BadgesView({ role }) {
   const [badges,    setBadges]    = useState([])
+  const [membres,   setMembres]   = useState([])
   const [loading,   setLoading]   = useState(true)
   const [alert,     setAlert]     = useState(null)
   const [confirm,   setConfirm]   = useState(null)
   const [assocForm, setAssocForm] = useState({ idBadge: '', idPorteur: '' })
 
-  useEffect(() => { charger() }, [])
+  useEffect(() => {
+    charger()
+    api.utilisateurs.lister(role).then(r => setMembres(r.data)).catch(() => {})
+  }, [])
 
   const charger = async () => {
     setLoading(true)
@@ -55,6 +60,19 @@ export default function BadgesView({ role }) {
         setAlert({ type: 'error', message: msg || 'Impossible d\'associer le badge. Veuillez réessayer.' })
       }
     }
+  }
+
+  const supprimer = (idBadge) => {
+    setConfirm({ message: `Supprimer définitivement le badge #${idBadge} ?`, onConfirm: async () => {
+      setConfirm(null)
+      try {
+        await api.badges.supprimer(idBadge, role)
+        setAlert({ type: 'success', message: `Badge #${idBadge} supprimé.` })
+        charger()
+      } catch (e) {
+        setAlert({ type: 'error', message: 'Impossible de supprimer ce badge. Veuillez réessayer.' })
+      }
+    }})
   }
 
   const dissocier = (idBadge) => {
@@ -111,25 +129,27 @@ export default function BadgesView({ role }) {
           <p className="text-xs text-gray-400 mb-3">
             Un badge nouvellement créé est <strong>disponible</strong> (sans porteur). Sélectionnez-en un et indiquez le membre à qui l'attribuer.
           </p>
-          <div className="flex items-end gap-3">
-            <div className="flex-1">
-              <Input label="Numéro du badge" value={assocForm.idBadge}
-                onChange={e => setAssocForm(p => ({ ...p, idBadge: posInt(e.target.value) }))}
-                type="number" min="1" placeholder="ex. 1" />
-            </div>
-            <div className="flex-1">
-              <Input label="Numéro du membre" value={assocForm.idPorteur}
-                onChange={e => setAssocForm(p => ({ ...p, idPorteur: posInt(e.target.value) }))}
-                type="number" min="1" placeholder="ex. 5" />
-            </div>
+          <div className="grid grid-cols-2 gap-x-4">
+            <Input label="Numéro du badge" value={assocForm.idBadge}
+              onChange={e => setAssocForm(p => ({ ...p, idBadge: posInt(e.target.value) }))}
+              type="number" min="1" placeholder="ex. 1" />
             <div className="mb-3">
-              <Btn onClick={associer} variant="success">Associer</Btn>
+              <label className="block text-sm text-gray-600 mb-1">Membre</label>
+              <select value={assocForm.idPorteur}
+                onChange={e => setAssocForm(p => ({ ...p, idPorteur: e.target.value }))}
+                className={selectCls}>
+                <option value="">-- Choisir un membre --</option>
+                {membres.map(m => (
+                  <option key={m.id} value={m.id}>{m.prenom} {m.nom} - {m.role}</option>
+                ))}
+              </select>
             </div>
           </div>
+          <Btn onClick={associer} variant="success">Associer</Btn>
         </Card>
       )}
 
-      <Card title="Liste des badges" action={<Btn variant="outline" onClick={charger}>Actualiser</Btn>}>
+      <Card title="Liste des badges" action={<button onClick={charger} className="p-1.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-500 hover:text-blue-700 cursor-pointer" title="Actualiser"><RefreshCw size={15} /></button>}>
         {loading ? <Spinner /> : (
           <table className="w-full text-sm">
             <thead>
@@ -150,19 +170,26 @@ export default function BadgesView({ role }) {
                     <BadgeTag label={b.statut} color={STATUT_COLOR[b.statut] || 'gray'} />
                   </td>
                   <td className="py-2 pr-4">
-                    {b.idPorteur ? `Membre #${b.idPorteur}` : <span className="text-gray-400">Non attribué</span>}
+                    {b.idPorteur
+                      ? (() => { const m = membres.find(m => m.id === b.idPorteur); return m ? `${m.prenom} ${m.nom}` : `Membre #${b.idPorteur}` })()
+                      : <span className="text-gray-400">Non attribué</span>}
                   </td>
                   <td className="py-2 pr-4 text-gray-400 text-xs">
-                    {b.dateCreation ? new Date(b.dateCreation).toLocaleDateString('fr-FR') : '—'}
+                    {b.dateCreation ? new Date(b.dateCreation).toLocaleDateString('fr-FR') : '-'}
                   </td>
                   <td className="py-2 pr-4 text-gray-400 text-xs">
-                    {b.dateAssociation ? new Date(b.dateAssociation).toLocaleDateString('fr-FR') : '—'}
+                    {b.dateAssociation ? new Date(b.dateAssociation).toLocaleDateString('fr-FR') : '-'}
                   </td>
                   {['SECRETAIRE', 'PRESIDENT'].includes(role) && (
                     <td className="py-2">
-                      {b.statut === 'ASSOCIE' && (
-                        <Btn size="sm" variant="outline" onClick={() => dissocier(b.idBadge)}>Dissocier</Btn>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {b.statut === 'ASSOCIE' && (
+                          <Btn size="sm" variant="outline" onClick={() => dissocier(b.idBadge)}>Dissocier</Btn>
+                        )}
+                        {b.statut !== 'ASSOCIE' && (
+                          <Btn size="sm" variant="danger" onClick={() => supprimer(b.idBadge)}>Supprimer</Btn>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>

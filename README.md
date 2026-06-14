@@ -60,7 +60,7 @@ config-server/src/main/resources/config/
 ├── competition-ms.yml       ← Port 8083, MongoDB competition_db :27017, Resilience4j
 ├── badge-ms.yml             ← Port 8084, MySQL badge_db :3309
 ├── presence-ms.yml          ← Port 8085, MySQL presence_db :3310, RabbitMQ
-├── statistiques-ms.yml      ← Port 8086, pas de base propre (agrégateur)
+├── statistiques-ms.yml      ← Port 8086, MySQL statistiques_db :3311, RabbitMQ
 └── gateway.yml              ← Port 8080, routes Spring Cloud Gateway
 ```
 

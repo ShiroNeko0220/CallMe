@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { BookOpen, Calendar, Clock, Timer, MapPin } from 'lucide-react'
+﻿import { useState, useEffect } from 'react'
+import { BookOpen, Calendar, Clock, Timer, MapPin, Trash2, RefreshCw } from 'lucide-react'
 import { api } from '../api'
 import { Card, Btn, Input, Alert, Spinner, ConfirmModal } from '../components/Card'
 
@@ -9,8 +9,11 @@ const dateMin7 = () => {
   return d.toISOString().split('T')[0]
 }
 
+const selectCls = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+
 export default function CoursView({ role }) {
   const [cours,        setCours]        = useState([])
+  const [enseignants,  setEnseignants]  = useState([])
   const [loading,      setLoading]      = useState(true)
   const [alert,        setAlert]        = useState(null)
   const [showForm,     setShowForm]     = useState(false)
@@ -21,7 +24,12 @@ export default function CoursView({ role }) {
     lieu: '', niveauCible: 1, enseignantId: '',
   })
 
-  useEffect(() => { charger() }, [])
+  useEffect(() => {
+    charger()
+    api.utilisateurs.lister(role)
+      .then(r => setEnseignants(r.data.filter(u => u.role === 'ENSEIGNANT')))
+      .catch(() => {})
+  }, [])
 
   const charger = async (niveau = filtreNiveau) => {
     setLoading(true)
@@ -120,10 +128,13 @@ export default function CoursView({ role }) {
               type="number" min="45" />
             <Input label="Lieu" optional value={form.lieu} onChange={e => f('lieu', e.target.value)} placeholder="ex. Salle A" />
             <div className="mb-3">
-              <Input label="Numéro de l'enseignant" value={form.enseignantId}
-                onChange={e => f('enseignantId', posInt(e.target.value))}
-                type="number" min="1" placeholder="ex. 3" />
-              <p className="text-xs text-gray-400 -mt-2">Enseignants : #3 (niv. 3) · #4 (niv. 5)</p>
+              <label className="block text-sm text-gray-600 mb-1">Enseignant <span className="text-red-500">*</span></label>
+              <select value={form.enseignantId} onChange={e => f('enseignantId', Number(e.target.value))} className={selectCls}>
+                <option value="">-- Choisir un enseignant --</option>
+                {enseignants.map(e => (
+                  <option key={e.id} value={e.id}>{e.prenom} {e.nom} - Niv. {e.niveauExpertise}</option>
+                ))}
+              </select>
             </div>
             <div className="mb-3">
               <label className="block text-sm text-gray-600 mb-1">Niveau cible</label>
@@ -140,7 +151,7 @@ export default function CoursView({ role }) {
         </Card>
       )}
 
-      <Card title={`${cours.length} cours`} action={<Btn variant="outline" onClick={() => charger()}>Actualiser</Btn>}>
+      <Card title={`${cours.length} cours`} action={<button onClick={() => charger()} className="p-1.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-500 hover:text-blue-700 cursor-pointer" title="Actualiser"><RefreshCw size={15} /></button>}>
         {loading ? <Spinner /> : <div className="space-y-3">
           {cours.map(c => (
             <div key={c.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">

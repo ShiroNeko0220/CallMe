@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Trophy, Calendar, MapPin } from 'lucide-react'
+﻿import { useState, useEffect } from 'react'
+import { Trophy, Calendar, MapPin, Trash2, RefreshCw } from 'lucide-react'
 import { api } from '../api'
 import { Card, Btn, Input, Alert, Spinner, ConfirmModal } from '../components/Card'
 
@@ -9,8 +9,12 @@ const dateMin7 = () => {
   return d.toISOString().split('T')[0]
 }
 
+const selectCls = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+
 export default function CompetitionsView({ role }) {
   const [competitions,     setCompetitions]     = useState([])
+  const [enseignants,      setEnseignants]      = useState([])
+  const [membres,          setMembres]          = useState([])
   const [loading,          setLoading]          = useState(true)
   const [loadingResultats, setLoadingResultats] = useState(false)
   const [selected,         setSelected]         = useState(null)
@@ -25,7 +29,23 @@ export default function CompetitionsView({ role }) {
   })
   const [resForm, setResForm] = useState({ eleveId: '', enseignantId: '', note: 5 })
 
-  useEffect(() => { charger() }, [])
+  useEffect(() => {
+    charger()
+    api.utilisateurs.lister(role).then(r => {
+      const tous = r.data
+      setEnseignants(tous.filter(u => u.role === 'ENSEIGNANT'))
+      setMembres(tous)
+    }).catch(() => {})
+  }, [])
+
+  const nomMembre = (id) => {
+    const m = membres.find(m => m.id === Number(id))
+    return m ? `${m.prenom} ${m.nom}` : `Membre #${id}`
+  }
+  const nomEnseignant = (id) => {
+    const e = enseignants.find(e => e.id === Number(id))
+    return e ? `${e.prenom} ${e.nom}` : `Enseignant #${id}`
+  }
 
   const charger = async () => {
     setLoading(true)
@@ -73,6 +93,7 @@ export default function CompetitionsView({ role }) {
     if (!resForm.enseignantId) return setAlert({ type: 'error', message: 'Veuillez indiquer le numéro de l\'enseignant.' })
     try {
       await api.competitions.ajouterResultat(selected.id, {
+        competitionId: selected.id,
         eleveId: Number(resForm.eleveId),
         enseignantId: Number(resForm.enseignantId),
         note: Number(resForm.note),
@@ -144,10 +165,13 @@ export default function CompetitionsView({ role }) {
               type="number" min="1" />
             <Input label="Lieu" optional value={form.lieu} onChange={e => f('lieu', e.target.value)} placeholder="ex. Palais des sports" />
             <div className="mb-3">
-              <Input label="Numéro de l'enseignant" required value={form.enseignantId}
-                onChange={e => f('enseignantId', posInt(e.target.value))}
-                type="number" min="1" placeholder="ex. 3" />
-              <p className="text-xs text-gray-400 -mt-2">Enseignants : #3 (niv. 3) · #4 (niv. 5)</p>
+              <label className="block text-sm text-gray-600 mb-1">Enseignant <span className="text-red-500">*</span></label>
+              <select value={form.enseignantId} onChange={e => f('enseignantId', Number(e.target.value))} className={selectCls}>
+                <option value="">-- Choisir un enseignant --</option>
+                {enseignants.map(e => (
+                  <option key={e.id} value={e.id}>{e.prenom} {e.nom} - Niv. {e.niveauExpertise}</option>
+                ))}
+              </select>
             </div>
             <div className="mb-3">
               <label className="block text-sm text-gray-600 mb-1">Niveau cible <span className="text-red-500">*</span></label>
@@ -165,7 +189,7 @@ export default function CompetitionsView({ role }) {
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <Card title={`${competitions.length} compétitions`} action={<Btn variant="outline" onClick={charger}>Actualiser</Btn>}>
+        <Card title={`${competitions.length} compétitions`} action={<button onClick={charger} className="p-1.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-500 hover:text-blue-700 cursor-pointer" title="Actualiser"><RefreshCw size={15} /></button>}>
           {loading ? <Spinner /> : <div className="space-y-2">
             {competitions.map(c => (
               <div key={c.id}
@@ -193,7 +217,7 @@ export default function CompetitionsView({ role }) {
         </Card>
 
         <Card
-          title={selected ? `Résultats — ${selected.titre}` : 'Sélectionnez une compétition'}
+          title={selected ? `Résultats - ${selected.titre}` : 'Sélectionnez une compétition'}
           action={selected && ['ENSEIGNANT', 'PRESIDENT'].includes(role) && (
             <Btn size="sm" onClick={() => setShowResForm(!showResForm)}>+ Résultat</Btn>
           )}
@@ -204,9 +228,15 @@ export default function CompetitionsView({ role }) {
               <Input label="Numéro du membre" required value={resForm.eleveId}
                 onChange={e => rf('eleveId', posInt(e.target.value))}
                 type="number" min="1" placeholder="ex. 5" />
-              <Input label="Numéro de l'enseignant" required value={resForm.enseignantId}
-                onChange={e => rf('enseignantId', posInt(e.target.value))}
-                type="number" min="1" placeholder="ex. 3" />
+              <div className="mb-3">
+                <label className="block text-sm text-gray-600 mb-1">Enseignant <span className="text-red-500">*</span></label>
+                <select value={resForm.enseignantId} onChange={e => rf('enseignantId', Number(e.target.value))} className={selectCls}>
+                  <option value="">-- Choisir un enseignant --</option>
+                  {enseignants.map(e => (
+                    <option key={e.id} value={e.id}>{e.prenom} {e.nom} - Niv. {e.niveauExpertise}</option>
+                  ))}
+                </select>
+              </div>
               <div className="mb-3">
                 <label className="block text-sm text-gray-600 mb-1">Note (0 à 10) <span className="text-red-500">*</span></label>
                 <input type="range" min="0" max="10" step="0.5" value={resForm.note}
@@ -232,9 +262,9 @@ export default function CompetitionsView({ role }) {
               <tbody>
                 {resultats.map((r, i) => (
                   <tr key={i} className="border-b border-gray-50">
-                    <td className="py-2">Membre #{r.eleveId}</td>
+                    <td className="py-2">{nomMembre(r.eleveId)}</td>
                     <td className="py-2 font-bold text-blue-600">{r.note} / 10</td>
-                    <td className="py-2 text-gray-400 text-xs">Enseignant #{r.enseignantId}</td>
+                    <td className="py-2 text-gray-400 text-xs">{nomEnseignant(r.enseignantId)}</td>
                   </tr>
                 ))}
               </tbody>

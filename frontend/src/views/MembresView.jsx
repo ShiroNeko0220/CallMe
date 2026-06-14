@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Users, Star, Eye, EyeOff } from 'lucide-react'
+﻿import { useState, useEffect } from 'react'
+import { Users, Star, Eye, EyeOff, Trash2, RefreshCw } from 'lucide-react'
 import { api } from '../api'
 import { Card, BadgeTag, Btn, Input, Alert, Spinner, ConfirmModal } from '../components/Card'
 
@@ -130,7 +130,7 @@ export default function MembresView({ role }) {
         </Card>
       )}
 
-      <Card title={`${membres.length} membre(s)`} action={<Btn variant="outline" onClick={charger}>Actualiser</Btn>}>
+      <Card title={`${membres.length} membre(s)`} action={<button onClick={charger} className="p-1.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-500 hover:text-blue-700 cursor-pointer" title="Actualiser"><RefreshCw size={15} /></button>}>
         {loading ? <Spinner /> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -157,7 +157,7 @@ export default function MembresView({ role }) {
                     <td className="py-2 pr-4">
                       <BadgeTag label={m.role} color={ROLE_COLOR[m.role] || 'gray'} />
                     </td>
-                    <td className="py-2 pr-4 text-gray-500">{m.ville || '—'}</td>
+                    <td className="py-2 pr-4 text-gray-500">{m.ville || '-'}</td>
                     {role === 'PRESIDENT' && (
                       <td className="py-2">
                         <Btn variant="danger" onClick={() => supprimer(m.id)}>Supprimer</Btn>

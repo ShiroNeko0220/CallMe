@@ -1,11 +1,15 @@
-import { useState, useEffect } from 'react'
-import { CheckSquare, Smartphone, BookOpen } from 'lucide-react'
+﻿import { useState, useEffect } from 'react'
+import { CheckSquare, Smartphone, BookOpen, RefreshCw } from 'lucide-react'
 import { api } from '../api'
 import { Card, Btn, Input, Alert, Spinner } from '../components/Card'
+
+const selectCls = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
 
 export default function PresencesView({ role, user }) {
   const [presences,   setPresences]   = useState([])
   const [mesCours,    setMesCours]    = useState([])
+  const [coursList,   setCoursList]   = useState([])
+  const [membresList, setMembresList] = useState([])
   const [loadingMes,  setLoadingMes]  = useState(false)
   const [alert,       setAlert]       = useState(null)
   const [badgeForm,   setBadgeForm]   = useState({ idBadge: '', idCours: '' })
@@ -13,8 +17,21 @@ export default function PresencesView({ role, user }) {
   const [filtreId,    setFiltreId]    = useState('')
 
   useEffect(() => {
+    api.cours.lister().then(r => setCoursList(r.data)).catch(() => {})
+    if (['ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT'].includes(role)) {
+      api.utilisateurs.lister(role).then(r => setMembresList(r.data)).catch(() => {})
+    }
     if (role === 'MEMBRE' && user?.id) chargerMesCours()
   }, [])
+
+  const nomMembre = (id) => {
+    const m = membresList.find(m => m.id === Number(id))
+    return m ? `${m.prenom} ${m.nom}` : `Membre #${id}`
+  }
+  const titreCours = (id) => {
+    const c = coursList.find(c => c.id === Number(id))
+    return c ? c.titre : `Cours #${id}`
+  }
 
   const chargerMesCours = async () => {
     setLoadingMes(true)
@@ -99,9 +116,15 @@ export default function PresencesView({ role, user }) {
               type="number" min="1" placeholder="ex. 1" />
           </div>
           <div className="flex-1">
-            <Input label="Numéro du cours" value={badgeForm.idCours}
+            <label className="block text-sm text-gray-600 mb-1">Cours</label>
+            <select value={badgeForm.idCours}
               onChange={e => setBadgeForm(p => ({ ...p, idCours: e.target.value }))}
-              type="number" min="1" placeholder="ex. 1" />
+              className={selectCls}>
+              <option value="">-- Choisir un cours --</option>
+              {coursList.map(c => (
+                <option key={c.id} value={c.id}>{c.titre} - {c.date}</option>
+              ))}
+            </select>
           </div>
           <div className="mb-3">
             <Btn variant="success" onClick={enregistrer}>Scanner</Btn>
@@ -111,7 +134,7 @@ export default function PresencesView({ role, user }) {
 
       {role === 'MEMBRE' && (
         <Card title={<span className="flex items-center gap-2"><BookOpen size={15} className="text-blue-600" /> Mes cours suivis</span>}
-          action={<Btn variant="outline" onClick={chargerMesCours}>Actualiser</Btn>}>
+          action={<button onClick={chargerMesCours} className="p-1.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-500 hover:text-blue-700 cursor-pointer" title="Actualiser"><RefreshCw size={15} /></button>}>
           {loadingMes ? <Spinner /> : mesCours.length === 0 ? (
             <p className="text-gray-400 text-sm text-center py-4">Aucun cours enregistré pour votre compte.</p>
           ) : (
@@ -152,13 +175,21 @@ export default function PresencesView({ role, user }) {
                 {t === 'eleve' ? 'Par membre' : 'Par cours'}
               </button>
             ))}
-            <Input
-              value={filtreId}
-              onChange={e => setFiltreId(e.target.value)}
-              placeholder={filtreType === 'eleve' ? 'Numéro du membre' : 'Numéro du cours'}
-              type="number"
-              min="1"
-            />
+            {filtreType === 'cours' ? (
+              <select value={filtreId} onChange={e => setFiltreId(e.target.value)} className={selectCls} style={{ flex: 1 }}>
+                <option value="">-- Choisir un cours --</option>
+                {coursList.map(c => (
+                  <option key={c.id} value={c.id}>{c.titre} - {c.date}</option>
+                ))}
+              </select>
+            ) : (
+              <select value={filtreId} onChange={e => setFiltreId(e.target.value)} className={selectCls} style={{ flex: 1 }}>
+                <option value="">-- Choisir un membre --</option>
+                {membresList.map(m => (
+                  <option key={m.id} value={m.id}>{m.prenom} {m.nom} - {m.role}</option>
+                ))}
+              </select>
+            )}
             <Btn size="sm" onClick={charger}>Chercher</Btn>
           </div>
           <table className="w-full text-sm">
@@ -176,10 +207,10 @@ export default function PresencesView({ role, user }) {
                 <tr key={p.idPresence} className="border-b border-gray-50 hover:bg-gray-50">
                   <td className="py-2 pr-4 text-gray-400">{p.idPresence}</td>
                   <td className="py-2 pr-4">#{p.idBadge}</td>
-                  <td className="py-2 pr-4">Membre #{p.idPorteur}</td>
-                  <td className="py-2 pr-4">Cours #{p.idCours}</td>
+                  <td className="py-2 pr-4">{nomMembre(p.idPorteur)}</td>
+                  <td className="py-2 pr-4">{titreCours(p.idCours)}</td>
                   <td className="py-2 text-gray-400 text-xs">
-                    {p.dateBadgeage ? new Date(p.dateBadgeage).toLocaleString('fr-FR') : '—'}
+                    {p.dateBadgeage ? new Date(p.dateBadgeage).toLocaleString('fr-FR') : '-'}
                   </td>
                 </tr>
               ))}

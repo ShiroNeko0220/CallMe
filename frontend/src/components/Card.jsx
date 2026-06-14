@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+
 export function Spinner() {
   return (
     <div className="flex justify-center items-center py-10">
@@ -96,8 +98,15 @@ export function Input({ label, required, optional, ...props }) {
   )
 }
 
-export function Alert({ type = 'error', message, onClose }) {
+export function Alert({ type = 'error', message, onClose, duration = 5000 }) {
+  useEffect(() => {
+    if (!message || !onClose) return
+    const t = setTimeout(onClose, duration)
+    return () => clearTimeout(t)
+  }, [message])
+
   if (!message) return null
+
   const colors = {
     error:   'bg-red-50 border-red-200 text-red-700',
     success: 'bg-green-50 border-green-200 text-green-700',
