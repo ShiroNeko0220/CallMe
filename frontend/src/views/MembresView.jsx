@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Users, Star } from 'lucide-react'
+import { Users, Star, Eye, EyeOff } from 'lucide-react'
 import { api } from '../api'
-import { Card, BadgeTag, Btn, Input, Alert, Spinner } from '../components/Card'
+import { Card, BadgeTag, Btn, Input, Alert, Spinner, ConfirmModal } from '../components/Card'
 
 const ROLE_COLOR = { MEMBRE: 'blue', ENSEIGNANT: 'green', SECRETAIRE: 'amber', PRESIDENT: 'purple' }
 
@@ -18,9 +18,11 @@ function NiveauStars({ niveau }) {
 
 export default function MembresView({ role }) {
   const [membres,  setMembres]  = useState([])
-  const [loading,  setLoading]  = useState(false)
+  const [loading,  setLoading]  = useState(true)
   const [alert,    setAlert]    = useState(null)
   const [showForm, setShowForm] = useState(false)
+  const [confirm,  setConfirm]  = useState(null)
+  const [showPwd,  setShowPwd]  = useState(false)
   const [form, setForm] = useState({
     nom: '', prenom: '', email: '',
     idConnexion: { login: '', mdp: '' },
@@ -32,7 +34,7 @@ export default function MembresView({ role }) {
   const charger = async () => {
     setLoading(true)
     try {
-      const res = await api.utilisateurs.lister()
+      const res = await api.utilisateurs.lister(role)
       setMembres(res.data)
     } catch (e) {
       setAlert({ type: 'error', message: 'Impossible de charger la liste des membres. Veuillez réessayer.' })
@@ -43,7 +45,7 @@ export default function MembresView({ role }) {
 
   const creer = async () => {
     try {
-      await api.utilisateurs.creer(form)
+      await api.utilisateurs.creer(form, role)
       setAlert({ type: 'success', message: 'Membre créé avec succès !' })
       setShowForm(false)
       setForm({ nom: '', prenom: '', email: '', idConnexion: { login: '', mdp: '' }, adresse: { ville: '', pays: 'France' } })
@@ -54,15 +56,17 @@ export default function MembresView({ role }) {
     }
   }
 
-  const supprimer = async (id) => {
-    if (!confirm('Supprimer ce membre définitivement ?')) return
-    try {
-      await api.utilisateurs.supprimer(id, role)
-      setAlert({ type: 'success', message: 'Membre supprimé.' })
-      charger()
-    } catch (e) {
-      setAlert({ type: 'error', message: 'Impossible de supprimer ce membre. Veuillez réessayer.' })
-    }
+  const supprimer = (id) => {
+    setConfirm({ message: 'Supprimer ce membre définitivement ?', onConfirm: async () => {
+      setConfirm(null)
+      try {
+        await api.utilisateurs.supprimer(id, role)
+        setAlert({ type: 'success', message: 'Membre supprimé.' })
+        charger()
+      } catch (e) {
+        setAlert({ type: 'error', message: 'Impossible de supprimer ce membre. Veuillez réessayer.' })
+      }
+    }})
   }
 
   const f = (field, val) => setForm(p => ({ ...p, [field]: val }))
@@ -71,6 +75,12 @@ export default function MembresView({ role }) {
 
   return (
     <div>
+      <ConfirmModal
+        message={confirm?.message}
+        onConfirm={confirm?.onConfirm}
+        onCancel={() => setConfirm(null)}
+      />
+
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
           <Users size={20} className="text-blue-600" /> Membres du club
@@ -84,15 +94,34 @@ export default function MembresView({ role }) {
 
       {showForm && ['SECRETAIRE', 'PRESIDENT'].includes(role) && (
         <Card title="Créer un nouveau membre">
-          <p className="text-xs text-amber-600 mb-3">Note : le rôle et le niveau seront MEMBRE/1 par défaut (modifiable ensuite).</p>
+          <p className="text-xs text-amber-600 mb-1">Note : le rôle et le niveau seront MEMBRE/1 par défaut (modifiable ensuite).</p>
+          <p className="text-xs text-gray-400 mb-3"><span className="text-red-500">*</span> Champ obligatoire</p>
           <div className="grid grid-cols-2 gap-x-4">
-            <Input label="Nom"    value={form.nom}    onChange={e => f('nom', e.target.value)}    placeholder="Dupont" />
-            <Input label="Prénom" value={form.prenom} onChange={e => f('prenom', e.target.value)} placeholder="Alice" />
-            <Input label="Email"  value={form.email}  onChange={e => f('email', e.target.value)}  placeholder="alice@club.fr" type="email" />
-            <Input label="Login"  value={form.idConnexion.login} onChange={e => fCnx('login', e.target.value)} placeholder="alice" />
-            <Input label="Mot de passe" value={form.idConnexion.mdp} onChange={e => fCnx('mdp', e.target.value)} type="password" placeholder="••••••" />
-            <Input label="Ville" value={form.adresse.ville} onChange={e => fAdr('ville', e.target.value)} placeholder="Toulouse" />
-            <Input label="Pays"  value={form.adresse.pays}  onChange={e => fAdr('pays', e.target.value)}  placeholder="France" />
+            <Input label="Nom"    required value={form.nom}    onChange={e => f('nom', e.target.value)}    placeholder="Dupont" />
+            <Input label="Prénom" required value={form.prenom} onChange={e => f('prenom', e.target.value)} placeholder="Alice" />
+            <Input label="Email"  required value={form.email}  onChange={e => f('email', e.target.value)}  placeholder="alice@club.fr" type="email" />
+            <Input label="Login"  required value={form.idConnexion.login} onChange={e => fCnx('login', e.target.value)} placeholder="alice" />
+            <div className="mb-3">
+              <label className="block text-sm text-gray-600 mb-1">Mot de passe <span className="text-red-500">*</span></label>
+              <div className="relative">
+                <input
+                  type={showPwd ? 'text' : 'password'}
+                  value={form.idConnexion.mdp}
+                  onChange={e => fCnx('mdp', e.target.value)}
+                  placeholder="••••••"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd(v => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                >
+                  {showPwd ? <Eye size={16} /> : <EyeOff size={16} />}
+                </button>
+              </div>
+            </div>
+            <Input label="Ville" optional value={form.adresse.ville} onChange={e => fAdr('ville', e.target.value)} placeholder="Toulouse" />
+            <Input label="Pays"  optional value={form.adresse.pays}  onChange={e => fAdr('pays', e.target.value)}  placeholder="France" />
           </div>
           <div className="flex gap-2 mt-2">
             <Btn onClick={creer}>Créer</Btn>

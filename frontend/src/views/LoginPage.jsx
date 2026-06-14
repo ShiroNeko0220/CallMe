@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { api } from '../api'
 
 export default function LoginPage({ onLogin }) {
-  const [form,  setForm]  = useState({ login: '', mdp: '' })
-  const [error, setError] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [form,      setForm]      = useState({ login: '', mdp: '' })
+  const [error,     setError]     = useState(null)
+  const [loading,   setLoading]   = useState(false)
+  const [showPwd,   setShowPwd]   = useState(false)
 
   const submit = async (e) => {
     e.preventDefault()
@@ -43,21 +45,30 @@ export default function LoginPage({ onLogin }) {
                 onChange={e => setForm(p => ({ ...p, login: e.target.value }))}
                 required
                 autoFocus
-                placeholder="Id membre"
+                placeholder="Identifiant"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
               />
             </div>
 
             <div>
               <label className="block text-sm text-gray-600 mb-1">Mot de passe</label>
-              <input
-                type="password"
-                value={form.mdp}
-                onChange={e => setForm(p => ({ ...p, mdp: e.target.value }))}
-                required
-                placeholder="••••••••"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-              />
+              <div className="relative">
+                <input
+                  type={showPwd ? 'text' : 'password'}
+                  value={form.mdp}
+                  onChange={e => setForm(p => ({ ...p, mdp: e.target.value }))}
+                  required
+                  placeholder="••••••••"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd(v => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                >
+                  {showPwd ? <Eye size={16} /> : <EyeOff size={16} />}
+                </button>
+              </div>
             </div>
 
             {error && (

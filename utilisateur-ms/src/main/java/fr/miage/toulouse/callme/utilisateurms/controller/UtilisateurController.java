@@ -40,6 +40,7 @@ public class UtilisateurController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT')")
     public List<UtilisateurResponse> lister() {
         return service.lister();
     }

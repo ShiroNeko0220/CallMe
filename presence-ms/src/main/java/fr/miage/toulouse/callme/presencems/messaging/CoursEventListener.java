@@ -17,7 +17,7 @@ public class CoursEventListener {
     public void onCoursCree(Map<String, Object> event) {
         Long coursId   = Long.parseLong(event.get("coursId").toString());
         Object niveau  = event.get("niveauCible");
-        log.info("[AMQP] Nouveau cours reçu — id={} niveau={}", coursId, niveau);
+        log.info("[AMQP] Nouveau cours reçu : id={} niveau={}", coursId, niveau);
         // Extension possible : pré-charger les élèves du niveau pour optimiser les badgeages
     }
 }

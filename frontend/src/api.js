@@ -9,9 +9,9 @@ const h = (role) => {
 export const api = {
   utilisateurs: {
     login:     (data)          => axios.post('/api/utilisateurs/login', data),
-    lister:    ()              => axios.get('/api/utilisateurs'),
+    lister:    (role)          => axios.get('/api/utilisateurs', { headers: h(role) }),
     consulter: (id)            => axios.get(`/api/utilisateurs/${id}`),
-    creer:     (data)          => axios.post('/api/utilisateurs', data),
+    creer:     (data, role)    => axios.post('/api/utilisateurs', data, { headers: h(role) }),
     modifier:  (id, data, role) => axios.patch(`/api/utilisateurs/${id}`, data, { headers: h(role) }),
     supprimer: (id, role)      => axios.delete(`/api/utilisateurs/${id}`, { headers: h(role) }),
   },

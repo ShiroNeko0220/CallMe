@@ -1,14 +1,43 @@
-import { useState } from 'react'
-import { CheckSquare, Smartphone } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { CheckSquare, Smartphone, BookOpen } from 'lucide-react'
 import { api } from '../api'
-import { Card, Btn, Input, Alert } from '../components/Card'
+import { Card, Btn, Input, Alert, Spinner } from '../components/Card'
 
-export default function PresencesView({ role }) {
+export default function PresencesView({ role, user }) {
   const [presences,   setPresences]   = useState([])
+  const [mesCours,    setMesCours]    = useState([])
+  const [loadingMes,  setLoadingMes]  = useState(false)
   const [alert,       setAlert]       = useState(null)
   const [badgeForm,   setBadgeForm]   = useState({ idBadge: '', idCours: '' })
   const [filtreType,  setFiltreType]  = useState('cours')
   const [filtreId,    setFiltreId]    = useState('')
+
+  useEffect(() => {
+    if (role === 'MEMBRE' && user?.id) chargerMesCours()
+  }, [])
+
+  const chargerMesCours = async () => {
+    setLoadingMes(true)
+    try {
+      const res = await api.presences.listerParEleve(user.id)
+      // Enrichir avec le détail du cours
+      const enrichies = await Promise.all(
+        res.data.map(async p => {
+          try {
+            const c = await api.cours.consulter(p.idCours)
+            return { ...p, cours: c.data }
+          } catch {
+            return { ...p, cours: null }
+          }
+        })
+      )
+      setMesCours(enrichies)
+    } catch {
+      // silencieux : section facultative
+    } finally {
+      setLoadingMes(false)
+    }
+  }
 
   const charger = async () => {
     if (!filtreId) return setAlert({ type: 'info', message: 'Veuillez entrer un numéro pour rechercher.' })
@@ -33,8 +62,9 @@ export default function PresencesView({ role }) {
     if (!badgeForm.idCours) return setAlert({ type: 'error', message: 'Veuillez saisir le numéro du cours.' })
     try {
       await api.presences.enregistrer(Number(badgeForm.idBadge), Number(badgeForm.idCours))
-      setAlert({ type: 'success', message: `Présence enregistrée — badge #${badgeForm.idBadge} pour le cours #${badgeForm.idCours}.` })
+      setAlert({ type: 'success', message: `Présence enregistrée : badge #${badgeForm.idBadge} pour le cours #${badgeForm.idCours}.` })
       setBadgeForm({ idBadge: '', idCours: '' })
+      if (role === 'MEMBRE' && user?.id) chargerMesCours()
       if (filtreId) charger()
     } catch (e) {
       const status = e.response?.status
@@ -60,7 +90,7 @@ export default function PresencesView({ role }) {
 
       <Card title={<span className="flex items-center gap-2"><Smartphone size={15} className="text-blue-600" /> Simuler un scan de badge (boîtier NFC)</span>}>
         <p className="text-sm text-gray-500 mb-4">
-          Reproduit ce que fait le boîtier physique — accessible à tous (pas de rôle requis).
+          Reproduit ce que fait le boîtier physique (accessible à tous).
         </p>
         <div className="flex items-end gap-3">
           <div className="flex-1">
@@ -78,6 +108,35 @@ export default function PresencesView({ role }) {
           </div>
         </div>
       </Card>
+
+      {role === 'MEMBRE' && (
+        <Card title={<span className="flex items-center gap-2"><BookOpen size={15} className="text-blue-600" /> Mes cours suivis</span>}
+          action={<Btn variant="outline" onClick={chargerMesCours}>Actualiser</Btn>}>
+          {loadingMes ? <Spinner /> : mesCours.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-4">Aucun cours enregistré pour votre compte.</p>
+          ) : (
+            <div className="space-y-2">
+              {mesCours.map(p => (
+                <div key={p.idPresence} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <div className="font-medium text-gray-800">
+                      {p.cours ? p.cours.titre : `Cours #${p.idCours}`}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      {p.cours && (<>
+                        {p.cours.date} · {p.cours.heureDebut} · {p.cours.lieu} · Niveau {p.cours.niveauCible}
+                      </>)}
+                    </div>
+                  </div>
+                  <span className="text-xs text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                    Présent ✓
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
 
       {['ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT'].includes(role) && (
         <Card title="Consulter les présences">

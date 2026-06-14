@@ -17,11 +17,13 @@ CREATE TABLE IF NOT EXISTS badge (
 
 INSERT INTO badge(id_badge, id_porteur, statut, date_creation, date_association)
 VALUES
-    (1, 5,    'ASSOCIE',    NOW(6), NOW(6)),
-    (2, 6,    'ASSOCIE',    NOW(6), NOW(6)),
-    (3, 7,    'ASSOCIE',    NOW(6), NOW(6)),
-    (4, 8,    'ASSOCIE',    NOW(6), NOW(6)),
-    (5, 9,    'ASSOCIE',    NOW(6), NOW(6)),
-    (6, NULL, 'DISPONIBLE', NOW(6), NULL),
-    (7, NULL, 'PERDU',      NOW(6), NULL),
-    (8, NULL, 'DESACTIVE',  NOW(6), NULL);
+    (1,  5,    'ASSOCIE',    NOW(6), NOW(6)),  -- membre 5 (niv 1)
+    (2,  6,    'ASSOCIE',    NOW(6), NOW(6)),  -- membre 6 (niv 2)
+    (3,  7,    'ASSOCIE',    NOW(6), NOW(6)),  -- membre 7 (niv 3)
+    (4,  8,    'ASSOCIE',    NOW(6), NOW(6)),  -- membre 8 (niv 4)
+    (5,  9,    'ASSOCIE',    NOW(6), NOW(6)),  -- membre 9 (niv 5)
+    (6,  NULL, 'DISPONIBLE', NOW(6), NULL),    -- disponible (test association)
+    (7,  NULL, 'PERDU',      NOW(6), NULL),    -- perdu
+    (8,  NULL, 'DESACTIVE',  NOW(6), NULL),    -- désactivé
+    (9,  10,   'ASSOCIE',    NOW(6), NOW(6)),  -- membre 10 (niv 3)
+    (10, NULL, 'DISPONIBLE', NOW(6), NULL);    -- disponible supplémentaire

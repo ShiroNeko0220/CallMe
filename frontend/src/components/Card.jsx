@@ -1,7 +1,32 @@
 export function Spinner() {
   return (
-    <div className="flex justify-center items-center py-8">
-      <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+    <div className="flex justify-center items-center py-10">
+      <div className="w-10 h-10 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin" />
+    </div>
+  )
+}
+
+export function ConfirmModal({ message, onConfirm, onCancel }) {
+  if (!message) return null
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+        <p className="text-gray-800 font-medium mb-6 text-center">{message}</p>
+        <div className="flex gap-3 justify-center">
+          <button
+            onClick={onConfirm}
+            className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
+          >
+            Oui
+          </button>
+          <button
+            onClick={onCancel}
+            className="px-5 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors cursor-pointer"
+          >
+            Non
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -53,10 +78,16 @@ export function Btn({ children, onClick, variant = 'primary', size = 'sm', disab
   )
 }
 
-export function Input({ label, ...props }) {
+export function Input({ label, required, optional, ...props }) {
   return (
     <div className="mb-3">
-      {label && <label className="block text-sm text-gray-600 mb-1">{label}</label>}
+      {label && (
+        <label className="block text-sm text-gray-600 mb-1">
+          {label}
+          {required && <span className="text-red-500 ml-0.5">*</span>}
+          {optional && <span className="text-gray-400 ml-1 font-normal">(optionnel)</span>}
+        </label>
+      )}
       <input
         {...props}
         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"

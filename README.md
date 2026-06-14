@@ -92,8 +92,8 @@ Base : **MySQL**
 | Méthode | Endpoint | Rôle requis | Description |
 |---------|----------|-------------|-------------|
 | POST | `/utilisateurs/login` | — | Authentification |
-| POST | `/utilisateurs` | — | Créer un membre |
-| GET | `/utilisateurs` | — | Lister tous les membres |
+| POST | `/utilisateurs` | SECRETAIRE, PRESIDENT | Créer un membre |
+| GET | `/utilisateurs` | ENSEIGNANT, SECRETAIRE, PRESIDENT | Lister tous les membres |
 | GET | `/utilisateurs/{id}` | — | Consulter un membre |
 | PATCH | `/utilisateurs/{id}` | SECRETAIRE, PRESIDENT | Modifier un membre |
 | DELETE | `/utilisateurs/{id}` | PRESIDENT | Supprimer un membre |
@@ -184,7 +184,7 @@ Base : **MySQL** · Messaging : **RabbitMQ** (consommateur)
 
 ### statistiques-ms — Tableaux de bord (Président)
 
-Aucune base propre — agrège les données via **Feign** (appels vers presence-ms, cours-ms, competition-ms).
+Base : **MySQL** (données pré-agrégées, mises à jour via événements RabbitMQ) · agrège également via **Feign** (presence-ms, cours-ms, competition-ms).
 
 | Méthode | Endpoint | Rôle requis | Description |
 |---------|----------|-------------|-------------|
@@ -230,25 +230,36 @@ Les données initiales sont chargées automatiquement au démarrage des conteneu
 
 ## Lancement
 
-**Pré-requis :** Docker Desktop (Java/Maven non requis — le build est containerisé)
+**Pré-requis :** Docker Desktop · Node.js 18+ (frontend en développement)
+
+### Mode développement (recommandé)
 
 ```bash
-# Démarrer toute l'application
+# 1. Démarrer le backend (bases de données + microservices)
 docker compose up --build -d
 
-# Suivre les logs
-docker compose logs -f
-
-# Arrêter (données conservées)
-docker compose down
-
-# Arrêter + supprimer les volumes
-docker compose down -v
+# 2. Démarrer le frontend avec hot-reload
+cd frontend && npm install && npm run dev
+# → http://localhost:3000
 ```
 
-Durée de démarrage : **2–3 minutes** (healthchecks MySQL, MongoDB, RabbitMQ).
+Durée de démarrage backend : **2–3 minutes** (healthchecks MySQL, MongoDB, RabbitMQ).
 
-> **Note :** si un microservice démarre avant que ses dépendances soient prêtes, il se réenregistre automatiquement auprès d'Eureka dans les 30 secondes.
+### Mode production (tout en Docker)
+
+```bash
+docker compose --profile prod up --build -d
+# Frontend disponible sur http://localhost:3000 via Nginx
+```
+
+### Commandes utiles
+
+```bash
+docker compose logs -f               # logs en temps réel
+docker compose down                  # arrêter (données conservées)
+docker compose down -v               # arrêter + supprimer les volumes
+docker compose build <service> && docker compose up -d <service>  # rebuild un seul MS
+```
 
 ---
 
