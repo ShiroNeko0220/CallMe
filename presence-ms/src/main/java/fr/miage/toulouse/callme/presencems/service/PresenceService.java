@@ -107,11 +107,11 @@ public class PresenceService {
 
     private BadgeClient.BadgeResponse getBadge(Long idBadge) {
         try { return badgeClient.getBadgeParId(idBadge); }
-        catch (Exception e) { throw new ApiException(HttpStatus.NOT_FOUND, "Badge introuvable"); }
+        catch (Exception e) { throw new ApiException(HttpStatus.NOT_FOUND, "Badge non existant"); }
     }
 
     private CoursClient.CoursResponse getCours(Long idCours) {
         try { return coursClient.getCours(idCours); }
-        catch (Exception e) { throw new ApiException(HttpStatus.NOT_FOUND, "Cours introuvable"); }
+        catch (Exception e) { throw new ApiException(HttpStatus.NOT_FOUND, "Cours non existant"); }
     }
 }

@@ -38,7 +38,13 @@ public class CompetitionService {
     }
 
     @Transactional
-    public CompetitionResponse creer(CompetitionRequest request) {
+    public CompetitionResponse creer(CompetitionRequest request, String roleConnecte, Long utilisateurConnecteId) {
+        if ("ENSEIGNANT".equals(roleConnecte)) {
+            if (utilisateurConnecteId == null || !utilisateurConnecteId.equals(request.getEnseignantId())) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "Un enseignant ne peut créer que ses propres compétitions");
+            }
+        }
+
         verifierNiveau(request.getNiveauCible());
         verifierDate(request.getDate());
 
@@ -95,18 +101,26 @@ public class CompetitionService {
     public List<CompetitionResponse> listerPourEleve(Long eleveId) {
         Integer niveau = utilisateurClient.getNiveauUtilisateur(eleveId);
         if (niveau == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "Élève introuvable");
+            throw new ApiException(HttpStatus.NOT_FOUND, "Élève non existant");
         }
         return competitionRepo.findByNiveauCible(niveau).stream().map(this::toDTO).toList();
     }
 
     @Transactional
-    public ResultatResponse ajouterResultat(String competitionId, ResultatRequest request) {
+    public ResultatResponse ajouterResultat(String competitionId, Long utilisateurConnecteId, ResultatRequest request) {
+        if (utilisateurConnecteId == null) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Utilisateur connecté obligatoire pour saisir un résultat");
+        }
+
         Competition competition = findById(competitionId);
         verifierNote(request.getNote());
 
-        String roleEnseignant = utilisateurClient.getRoleUtilisateur(request.getEnseignantId());
-        if (!"ENSEIGNANT".equals(roleEnseignant) && !"PRESIDENT".equals(roleEnseignant)) {
+        if (!utilisateurConnecteId.equals(competition.getEnseignantId())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Seul l'enseignant responsable de la compétition peut saisir un résultat");
+        }
+
+        String roleEnseignant = utilisateurClient.getRoleUtilisateur(utilisateurConnecteId);
+        if (!"ENSEIGNANT".equals(roleEnseignant)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Seul un enseignant peut saisir un résultat");
         }
 
@@ -124,7 +138,7 @@ public class CompetitionService {
         resultat.setCompetitionId(competition.getId());
         resultat.setCompetitionDate(competition.getDate());
         resultat.setEleveId(request.getEleveId());
-        resultat.setEnseignantId(request.getEnseignantId());
+        resultat.setEnseignantId(utilisateurConnecteId);
         resultat.setNote(request.getNote());
 
         Resultat saved = resultatRepo.save(resultat);

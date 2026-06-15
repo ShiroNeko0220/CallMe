@@ -53,7 +53,7 @@ public class StatistiquesService {
 
     public List<CoursPresenceEleveResponse> coursPourEleveAvecPresence(Long eleveId, LocalDate debut, LocalDate fin) {
         StatEleve eleve = eleveRepo.findById(eleveId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Élève introuvable"));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Élève non existant"));
 
         List<StatCours> coursNiveau = coursRepo.findByNiveauCible(eleve.getNiveauExpertise());
 

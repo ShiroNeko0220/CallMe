@@ -1,6 +1,7 @@
 package fr.miage.toulouse.callme.utilisateurms;
 
 import fr.miage.toulouse.callme.libcommun.ApiException;
+import fr.miage.toulouse.callme.utilisateurms.DTO.AdminUpdateUtilisateurRequest;
 import fr.miage.toulouse.callme.utilisateurms.DTO.UpdateUtilisateurRequest;
 import fr.miage.toulouse.callme.utilisateurms.DTO.UtilisateurCreationRequest;
 import fr.miage.toulouse.callme.utilisateurms.DTO.UtilisateurResponse;
@@ -146,7 +147,7 @@ public class UtilisateurServiceTest {
 
         assertThatThrownBy(() -> service.consulter(5L))
                 .isInstanceOf(ApiException.class)
-                .hasMessage("Utilisateur introuvable");
+                .hasMessage("Utilisateur non existant");
 
         verify(repo).findById(5L);
     }
@@ -167,11 +168,11 @@ public class UtilisateurServiceTest {
     @Test
     void modifier_utilisateurNonExistant() {
         when(repo.findById(99L)).thenReturn(Optional.empty());
-        UpdateUtilisateurRequest update = new UpdateUtilisateurRequest("NouveauNom", "NouveauPrenom", "nouveau@test.com", "Paris", "France", null, null);
+        UpdateUtilisateurRequest update = new UpdateUtilisateurRequest("NouveauNom", "NouveauPrenom", "nouveau@test.com", "Paris", "France");
 
-        assertThatThrownBy(() -> service.modifier(99L, update))
+        assertThatThrownBy(() -> service.modifier(99L, 99L, update))
                 .isInstanceOf(ApiException.class)
-                .hasMessage("Utilisateur introuvable");
+                .hasMessage("Utilisateur non existant");
 
         verify(repo).findById(99L);
         verify(repo, never()).save(any(Utilisateur.class));
@@ -181,9 +182,9 @@ public class UtilisateurServiceTest {
     void modifier_utilisateurExistant() {
         when(repo.findById(1L)).thenReturn(Optional.of(u1));
         when(repo.save(any(Utilisateur.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        UpdateUtilisateurRequest update = new UpdateUtilisateurRequest("NouveauNom", "NouveauPrenom", "nouveau@test.com", "Lyon", "France", null, null);
+        UpdateUtilisateurRequest update = new UpdateUtilisateurRequest("NouveauNom", "NouveauPrenom", "nouveau@test.com", "Lyon", "France");
 
-        UtilisateurResponse resultat = service.modifier(1L, update);
+        UtilisateurResponse resultat = service.modifier(1L, 1L, update);
 
         assertThat(resultat.getId()).isEqualTo(1L);
         assertThat(resultat.getNom()).isEqualTo("NouveauNom");
@@ -191,6 +192,34 @@ public class UtilisateurServiceTest {
         assertThat(resultat.getEmail()).isEqualTo("nouveau@test.com");
         assertThat(resultat.getVille()).isEqualTo("Lyon");
         assertThat(resultat.getRole()).isEqualTo(Role.MEMBRE);
+
+        verify(repo).findById(1L);
+        verify(repo).save(u1);
+    }
+
+
+    @Test
+    void modifier_autreUtilisateur_refuse() {
+        UpdateUtilisateurRequest update = new UpdateUtilisateurRequest("NouveauNom", null, null, null, null);
+
+        assertThatThrownBy(() -> service.modifier(1L, 2L, update))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Vous ne pouvez modifier que votre propre profil");
+
+        verify(repo, never()).findById(any());
+        verify(repo, never()).save(any(Utilisateur.class));
+    }
+
+    @Test
+    void modifierAdmin_peutChangerRoleEtNiveau() {
+        when(repo.findById(1L)).thenReturn(Optional.of(u1));
+        when(repo.save(any(Utilisateur.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        AdminUpdateUtilisateurRequest update = new AdminUpdateUtilisateurRequest(null, null, null, null, null, 4, Role.ENSEIGNANT);
+
+        UtilisateurResponse resultat = service.modifierAdmin(1L, update);
+
+        assertThat(resultat.getRole()).isEqualTo(Role.ENSEIGNANT);
+        assertThat(resultat.getNiveauExpertise()).isEqualTo(4);
 
         verify(repo).findById(1L);
         verify(repo).save(u1);
@@ -213,7 +242,7 @@ public class UtilisateurServiceTest {
 
         assertThatThrownBy(() -> service.supprimer(99L))
                 .isInstanceOf(ApiException.class)
-                .hasMessage("Utilisateur introuvable");
+                .hasMessage("Utilisateur non existant");
 
         verify(repo).existsById(99L);
         verify(repo, never()).deleteById(any());

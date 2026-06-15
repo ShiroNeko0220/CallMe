@@ -24,7 +24,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -73,7 +72,7 @@ class CoursServiceTest {
         when(repo.save(any(Cours.class))).thenReturn(baseCours);
         doNothing().when(rabbitTemplate).convertAndSend(anyString(), anyString(), any(Object.class));
 
-        CoursResponse resultat = service.creer(request);
+        CoursResponse resultat = service.creer(request, "PRESIDENT", 99L);
 
         assertNotNull(resultat);
         assertEquals(100L, resultat.getId());
@@ -91,7 +90,7 @@ class CoursServiceTest {
     void creer_DureeInvalide() {
         request.setDuree(30);
 
-        assertThatThrownBy(() -> service.creer(request))
+        assertThatThrownBy(() -> service.creer(request, "PRESIDENT", 99L))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("Durée invalide (45min minimum)");
     }
@@ -100,7 +99,7 @@ class CoursServiceTest {
     void creer_NiveauInvalide() {
         request.setNiveauCible(6);
 
-        assertThatThrownBy(() -> service.creer(request))
+        assertThatThrownBy(() -> service.creer(request, "PRESIDENT", 99L))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("Niveau invalide (entre 1 et 5)");
     }
@@ -109,7 +108,7 @@ class CoursServiceTest {
     void creer_DateTropProche() {
         request.setDate(LocalDate.now().plusDays(5));
 
-        assertThatThrownBy(() -> service.creer(request))
+        assertThatThrownBy(() -> service.creer(request, "PRESIDENT", 99L))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("Date cours doit être supérieure à 7 jours");
     }
@@ -118,9 +117,32 @@ class CoursServiceTest {
     void creer_EnseignantNonApte() {
         when(utilisateurClient.enseignantApte(1L, 3)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.creer(request))
+        assertThatThrownBy(() -> service.creer(request, "PRESIDENT", 99L))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("Enseignant non apte pour ce niveau");
+    }
+
+
+    @Test
+    void creer_enseignantCreeSonPropreCours() {
+        when(utilisateurClient.enseignantApte(1L, 3)).thenReturn(true);
+        when(repo.save(any(Cours.class))).thenReturn(baseCours);
+
+        CoursResponse resultat = service.creer(request, "ENSEIGNANT", 1L);
+
+        assertNotNull(resultat);
+        assertEquals(1L, resultat.getEnseignantId());
+        verify(repo).save(any(Cours.class));
+    }
+
+    @Test
+    void creer_enseignantNePeutPasCreerPourUnAutre() {
+        assertThatThrownBy(() -> service.creer(request, "ENSEIGNANT", 2L))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Un enseignant ne peut créer que ses propres cours");
+
+        verify(utilisateurClient, never()).enseignantApte(any(), anyInt());
+        verify(repo, never()).save(any(Cours.class));
     }
 
     @Test

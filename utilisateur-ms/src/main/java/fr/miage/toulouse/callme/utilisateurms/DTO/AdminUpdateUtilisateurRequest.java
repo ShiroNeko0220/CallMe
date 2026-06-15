@@ -1,6 +1,9 @@
 package fr.miage.toulouse.callme.utilisateurms.DTO;
 
+import fr.miage.toulouse.callme.utilisateurms.enums.Role;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UpdateUtilisateurRequest {
+public class AdminUpdateUtilisateurRequest {
     private String nom;
     private String prenom;
 
@@ -17,4 +20,10 @@ public class UpdateUtilisateurRequest {
 
     private String ville;
     private String pays;
+
+    @Min(1)
+    @Max(5)
+    private Integer niveauExpertise;
+
+    private Role role;
 }

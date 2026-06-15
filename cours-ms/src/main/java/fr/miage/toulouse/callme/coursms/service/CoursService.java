@@ -28,7 +28,11 @@ public class CoursService {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    public CoursResponse creer(CoursRequest request) {
+    public CoursResponse creer(CoursRequest request, String roleConnecte, Long utilisateurConnecteId) {
+        if ("ENSEIGNANT".equals(roleConnecte) && (utilisateurConnecteId == null || !utilisateurConnecteId.equals(request.getEnseignantId()))) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Un enseignant ne peut créer que ses propres cours");
+        }
+
         verifierDuree(request.getDuree());
         verifierNiveau(request.getNiveauCible());
         verifierDateCours(request.getDate());
@@ -54,17 +58,17 @@ public class CoursService {
         Cours saved = repo.save(cours);
 
         rabbitTemplate.convertAndSend(
-            RabbitMQConfig.EXCHANGE,
-            RabbitMQConfig.KEY_COURS,
-            Map.of(
-                "id", saved.getId(),
-                "titre", saved.getTitre(),
-                "niveauCible", saved.getNiveauCible(),
-                "date", saved.getDate().toString(),
-                "heureDebut", saved.getHeureDebut().toString(),
-                "duree", saved.getDuree(),
-                "enseignantId", saved.getEnseignantId()
-            )
+                RabbitMQConfig.EXCHANGE,
+                RabbitMQConfig.KEY_COURS,
+                Map.of(
+                        "id", saved.getId(),
+                        "titre", saved.getTitre(),
+                        "niveauCible", saved.getNiveauCible(),
+                        "date", saved.getDate().toString(),
+                        "heureDebut", saved.getHeureDebut().toString(),
+                        "duree", saved.getDuree(),
+                        "enseignantId", saved.getEnseignantId()
+                )
         );
 
         return toDTO(saved);

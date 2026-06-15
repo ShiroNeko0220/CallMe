@@ -1,8 +1,9 @@
 import axios from 'axios'
 
-const h = (role) => {
+const h = (role, userId) => {
   const headers = { 'Content-Type': 'application/json' }
   if (role) headers['X-Role'] = role
+  if (userId) headers['X-Utilisateur-Id'] = userId
   return headers
 }
 
@@ -11,8 +12,9 @@ export const api = {
     login:     (data)          => axios.post('/api/utilisateurs/login', data),
     lister:    (role)          => axios.get('/api/utilisateurs', { headers: h(role) }),
     consulter: (id)            => axios.get(`/api/utilisateurs/${id}`),
-    creer:     (data, role)    => axios.post('/api/utilisateurs', data, { headers: h(role) }),
-    modifier:  (id, data, role) => axios.patch(`/api/utilisateurs/${id}`, data, { headers: h(role) }),
+    creer:     (data, role, userId) => axios.post('/api/utilisateurs', data, { headers: h(role, userId) }),
+    modifier:      (id, data, role, userId) => axios.patch(`/api/utilisateurs/${id}`, data, { headers: h(role, userId) }),
+    modifierAdmin: (id, data, role, userId) => axios.patch(`/api/utilisateurs/${id}/admin`, data, { headers: h(role, userId) }),
     supprimer: (id, role)      => axios.delete(`/api/utilisateurs/${id}`, { headers: h(role) }),
   },
 
@@ -21,8 +23,8 @@ export const api = {
     listerParNiveau:     (niveau)     => axios.get(`/api/cours/niveau/${niveau}`),
     listerParEnseignant: (id)         => axios.get(`/api/cours/enseignant/${id}`),
     consulter:           (id)         => axios.get(`/api/cours/${id}`),
-    creer:               (data, role) => axios.post('/api/cours', data, { headers: h(role) }),
-    modifier:            (id, data, role) => axios.patch(`/api/cours/${id}`, data, { headers: h(role) }),
+    creer:               (data, role, userId) => axios.post('/api/cours', data, { headers: h(role, userId) }),
+    modifier:            (id, data, role, userId) => axios.patch(`/api/cours/${id}`, data, { headers: h(role, userId) }),
     supprimer:           (id, role)   => axios.delete(`/api/cours/${id}`, { headers: h(role) }),
   },
 
@@ -30,11 +32,12 @@ export const api = {
     lister:          ()              => axios.get('/api/competitions'),
     listerParNiveau: (niveau)        => axios.get(`/api/competitions/niveau/${niveau}`),
     listerPourEleve: (eleveId)       => axios.get(`/api/competitions/eleve/${eleveId}`),
+    listerParEnseignant: (enseignantId) => axios.get(`/api/competitions/enseignant/${enseignantId}`),
     consulter:       (id)            => axios.get(`/api/competitions/${id}`),
-    creer:           (data, role)    => axios.post('/api/competitions', data, { headers: h(role) }),
+    creer:           (data, role, userId) => axios.post('/api/competitions', data, { headers: h(role, userId) }),
     supprimer:       (id, role)      => axios.delete(`/api/competitions/${id}`, { headers: h(role) }),
-    ajouterResultat: (competId, data, role) =>
-      axios.post(`/api/competitions/${competId}/resultats`, data, { headers: h(role) }),
+    ajouterResultat: (competId, data, role, userId) =>
+        axios.post(`/api/competitions/${competId}/resultats`, data, { headers: h(role, userId) }),
     listerResultats: (competId)      => axios.get(`/api/competitions/${competId}/resultats`),
     resultatsEleve:  (eleveId)       => axios.get(`/api/competitions/eleve/${eleveId}/resultats`),
     compterParNiveau: (niveau)       => axios.get(`/api/competitions/niveau/${niveau}/count`),
@@ -45,18 +48,18 @@ export const api = {
     consulter: (id)                      => axios.get(`/api/badges/${id}`),
     creer:     (role)                    => axios.post('/api/badges', {}, { headers: h(role) }),
     associer:  (idBadge, idPorteur, role) =>
-      axios.patch(`/api/badges/${idBadge}/associer/${idPorteur}`, {}, { headers: h(role) }),
+        axios.patch(`/api/badges/${idBadge}/associer/${idPorteur}`, {}, { headers: h(role) }),
     dissocier: (idBadge, role)           =>
-      axios.patch(`/api/badges/${idBadge}/dissocier`, {}, { headers: h(role) }),
+        axios.patch(`/api/badges/${idBadge}/dissocier`, {}, { headers: h(role) }),
     supprimer: (id, role)                =>
-      axios.delete(`/api/badges/${id}`, { headers: h(role) }),
+        axios.delete(`/api/badges/${id}`, { headers: h(role) }),
   },
 
   presences: {
     listerParEleve: (id)            => axios.get(`/api/presences/eleve/${id}`),
     listerParCours: (id)            => axios.get(`/api/presences/cours/${id}`),
     enregistrer:    (idBadge, idCours) =>
-      axios.post('/api/presences/badger', { idBadge, idCours }),
+        axios.post('/api/presences/badger', { idBadge, idCours }),
   },
 
   statistiques: {

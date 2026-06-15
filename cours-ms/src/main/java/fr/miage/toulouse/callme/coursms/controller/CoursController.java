@@ -23,9 +23,12 @@ public class CoursController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
-    public ResponseEntity<CoursResponse> creer(@Valid @RequestBody CoursRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.creer(request));
+    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT')")
+    public ResponseEntity<CoursResponse> creer(
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte,
+            @RequestHeader(value = "X-Utilisateur-Id", required = false) Long utilisateurConnecteId,
+            @Valid @RequestBody CoursRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.creer(request, roleConnecte, utilisateurConnecteId));
     }
 
     @GetMapping("/{id}")

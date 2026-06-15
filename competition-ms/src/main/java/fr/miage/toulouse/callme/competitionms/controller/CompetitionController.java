@@ -27,8 +27,11 @@ public class CompetitionController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ENSEIGNANT', 'PRESIDENT')")
-    public ResponseEntity<CompetitionResponse> creer(@Valid @RequestBody CompetitionRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(competitionService.creer(request));
+    public ResponseEntity<CompetitionResponse> creer(
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte,
+            @RequestHeader(value = "X-Utilisateur-Id", required = false) Long utilisateurConnecteId,
+            @Valid @RequestBody CompetitionRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(competitionService.creer(request, roleConnecte, utilisateurConnecteId));
     }
 
     @GetMapping("/{id}")
@@ -67,8 +70,9 @@ public class CompetitionController {
     @PreAuthorize("hasAnyRole('ENSEIGNANT', 'PRESIDENT')")
     public ResponseEntity<ResultatResponse> ajouterResultat(
             @PathVariable String competitionId,
+            @RequestHeader(value = "X-Utilisateur-Id", required = false) Long utilisateurConnecteId,
             @Valid @RequestBody ResultatRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(competitionService.ajouterResultat(competitionId, request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(competitionService.ajouterResultat(competitionId, utilisateurConnecteId, request));
     }
 
     @GetMapping("/{competitionId}/resultats")

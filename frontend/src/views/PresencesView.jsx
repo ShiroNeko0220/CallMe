@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react'
 import { CheckSquare, Smartphone, BookOpen, RefreshCw } from 'lucide-react'
 import { api } from '../api'
-import { Card, Btn, Input, Alert, Spinner } from '../components/Card'
+import { Card, Btn, Alert, Spinner } from '../components/Card'
 
 const selectCls = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
 
@@ -37,7 +37,6 @@ export default function PresencesView({ role, user }) {
     setLoadingMes(true)
     try {
       const res = await api.presences.listerParEleve(user.id)
-      // Enrichir avec le détail du cours
       const enrichies = await Promise.all(
         res.data.map(async p => {
           try {
@@ -88,7 +87,7 @@ export default function PresencesView({ role, user }) {
       if (status === 409) {
         setAlert({ type: 'error', message: 'Ce badge a déjà été scanné pour ce cours.' })
       } else if (status === 404) {
-        setAlert({ type: 'error', message: 'Badge ou cours introuvable. Vérifiez les numéros saisis.' })
+        setAlert({ type: 'error', message: 'Badge ou cours non existant. Vérifiez les numéros saisis.' })
       } else if (status === 403) {
         setAlert({ type: 'error', message: 'Ce badge n\'est pas attribué à un membre ou n\'est pas actif.' })
       } else {
@@ -106,29 +105,32 @@ export default function PresencesView({ role, user }) {
       <Alert {...alert} onClose={() => setAlert(null)} />
 
       <Card title={<span className="flex items-center gap-2"><Smartphone size={15} className="text-blue-600" /> Simuler un scan de badge (boîtier NFC)</span>}>
-        <p className="text-sm text-gray-500 mb-4">
-          Reproduit ce que fait le boîtier physique (accessible à tous).
-        </p>
-        <div className="flex items-end gap-3">
-          <div className="flex-1">
-            <Input label="Numéro de badge" value={badgeForm.idBadge}
-              onChange={e => setBadgeForm(p => ({ ...p, idBadge: e.target.value }))}
-              type="number" min="1" placeholder="ex. 1" />
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">Numéro de badge</label>
+            <input
+                value={badgeForm.idBadge}
+                onChange={e => setBadgeForm(p => ({ ...p, idBadge: e.target.value }))}
+                type="number"
+                min="1"
+                placeholder="ex. 1"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            />
           </div>
-          <div className="flex-1">
+          <div>
             <label className="block text-sm text-gray-600 mb-1">Cours</label>
-            <select value={badgeForm.idCours}
-              onChange={e => setBadgeForm(p => ({ ...p, idCours: e.target.value }))}
-              className={selectCls}>
+            <select
+                value={badgeForm.idCours}
+                onChange={e => setBadgeForm(p => ({ ...p, idCours: e.target.value }))}
+                className={selectCls}
+            >
               <option value="">-- Choisir un cours --</option>
               {coursList.map(c => (
                 <option key={c.id} value={c.id}>{c.titre} - {c.date}</option>
               ))}
             </select>
           </div>
-          <div className="mb-3">
-            <Btn variant="success" onClick={enregistrer}>Scanner</Btn>
-          </div>
+          <Btn variant="success" onClick={enregistrer}>Scanner</Btn>
         </div>
       </Card>
 

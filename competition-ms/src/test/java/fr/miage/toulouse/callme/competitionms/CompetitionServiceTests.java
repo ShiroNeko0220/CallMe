@@ -67,7 +67,7 @@ class CompetitionServiceTests {
         when(utilisateurClient.enseignantApte(1L, 3)).thenReturn(true);
         when(competitionRepo.save(any())).thenReturn(baseCompetition);
 
-        CompetitionResponse result = service.creer(request);
+        CompetitionResponse result = service.creer(request, "PRESIDENT", 99L);
 
         assertNotNull(result);
         assertEquals("comp-1", result.getId());
@@ -81,7 +81,7 @@ class CompetitionServiceTests {
     void creer_dateTropProche() {
         request.setDate(LocalDate.now().plusDays(3));
 
-        assertThatThrownBy(() -> service.creer(request))
+        assertThatThrownBy(() -> service.creer(request, "PRESIDENT", 99L))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("La date doit être supérieure à 7 jours calendaires");
     }
@@ -90,7 +90,7 @@ class CompetitionServiceTests {
     void creer_niveauInvalide() {
         request.setNiveauCible(6);
 
-        assertThatThrownBy(() -> service.creer(request))
+        assertThatThrownBy(() -> service.creer(request, "PRESIDENT", 99L))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("Niveau invalide entre 1 et 5");
     }
@@ -99,9 +99,33 @@ class CompetitionServiceTests {
     void creer_enseignantNonApte() {
         when(utilisateurClient.enseignantApte(1L, 3)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.creer(request))
+        assertThatThrownBy(() -> service.creer(request, "PRESIDENT", 99L))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("Enseignant non apte pour ce niveau");
+    }
+
+
+    @Test
+    void creer_enseignantCreeSaCompetitionNiveauInferieur() {
+        request.setNiveauCible(2);
+        when(utilisateurClient.enseignantApte(1L, 2)).thenReturn(true);
+        when(competitionRepo.save(any())).thenReturn(baseCompetition);
+
+        CompetitionResponse result = service.creer(request, "ENSEIGNANT", 1L);
+
+        assertNotNull(result);
+        verify(utilisateurClient).enseignantApte(1L, 2);
+        verify(competitionRepo).save(any());
+    }
+
+    @Test
+    void creer_enseignantNePeutPasCreerPourUnAutre() {
+        assertThatThrownBy(() -> service.creer(request, "ENSEIGNANT", 2L))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Un enseignant ne peut créer que ses propres compétitions");
+
+        verify(utilisateurClient, never()).enseignantApte(any(), anyInt());
+        verify(competitionRepo, never()).save(any());
     }
 
     @Test
@@ -114,7 +138,7 @@ class CompetitionServiceTests {
     }
 
     @Test
-    void consulter_introuvable() {
+    void consulter_nonExistant() {
         when(competitionRepo.findById("xxx")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.consulter("xxx"))
@@ -143,7 +167,7 @@ class CompetitionServiceTests {
         when(resultatRepo.findByCompetitionIdAndEleveId("comp-1", 5L)).thenReturn(Optional.empty());
         when(resultatRepo.save(any())).thenReturn(savedResultat);
 
-        ResultatResponse result = service.ajouterResultat("comp-1", req);
+        ResultatResponse result = service.ajouterResultat("comp-1", 1L, req);
 
         assertNotNull(result);
         assertEquals(new BigDecimal("7.5"), result.getNote());
@@ -159,7 +183,7 @@ class CompetitionServiceTests {
 
         when(competitionRepo.findById("comp-1")).thenReturn(Optional.of(baseCompetition));
 
-        assertThatThrownBy(() -> service.ajouterResultat("comp-1", req))
+        assertThatThrownBy(() -> service.ajouterResultat("comp-1", 1L, req))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("La note doit être comprise entre 0 et 10");
     }
@@ -173,7 +197,7 @@ class CompetitionServiceTests {
 
         when(competitionRepo.findById("comp-1")).thenReturn(Optional.of(baseCompetition));
 
-        assertThatThrownBy(() -> service.ajouterResultat("comp-1", req))
+        assertThatThrownBy(() -> service.ajouterResultat("comp-1", 1L, req))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("La note doit avoir une précision maximale au dixième");
     }
@@ -182,13 +206,12 @@ class CompetitionServiceTests {
     void ajouterResultat_nonEnseignant_interdit() {
         ResultatRequest req = new ResultatRequest();
         req.setEleveId(5L);
-        req.setEnseignantId(2L);
         req.setNote(new BigDecimal("8.0"));
 
         when(competitionRepo.findById("comp-1")).thenReturn(Optional.of(baseCompetition));
-        when(utilisateurClient.getRoleUtilisateur(2L)).thenReturn("MEMBRE");
+        when(utilisateurClient.getRoleUtilisateur(1L)).thenReturn("MEMBRE");
 
-        assertThatThrownBy(() -> service.ajouterResultat("comp-1", req))
+        assertThatThrownBy(() -> service.ajouterResultat("comp-1", 1L, req))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("Seul un enseignant peut saisir un résultat");
     }
@@ -206,9 +229,26 @@ class CompetitionServiceTests {
         when(utilisateurClient.getNiveauUtilisateur(5L)).thenReturn(3);
         when(resultatRepo.findByCompetitionIdAndEleveId("comp-1", 5L)).thenReturn(Optional.of(existant));
 
-        assertThatThrownBy(() -> service.ajouterResultat("comp-1", req))
+        assertThatThrownBy(() -> service.ajouterResultat("comp-1", 1L, req))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("Résultat déjà saisi pour cet élève");
+    }
+
+
+    @Test
+    void ajouterResultat_autreEnseignantInterdit() {
+        ResultatRequest req = new ResultatRequest();
+        req.setEleveId(5L);
+        req.setNote(new BigDecimal("8.0"));
+
+        when(competitionRepo.findById("comp-1")).thenReturn(Optional.of(baseCompetition));
+
+        assertThatThrownBy(() -> service.ajouterResultat("comp-1", 2L, req))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Seul l'enseignant responsable de la compétition peut saisir un résultat");
+
+        verify(utilisateurClient, never()).getRoleUtilisateur(any());
+        verify(resultatRepo, never()).save(any());
     }
 
     @Test

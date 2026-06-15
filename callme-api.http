@@ -60,9 +60,11 @@ X-Role: MEMBRE
 
 ###
 
-### Modifier un utilisateur
+### Modifier son propre profil (MEMBRE / ENSEIGNANT / SECRETAIRE / PRESIDENT)
+### Ne permet pas de modifier le rôle ni le niveau d'expertise
 PATCH {{baseUrl}}/api/utilisateurs/1
-X-Role: SECRETAIRE
+X-Role: MEMBRE
+X-Utilisateur-Id: 1
 Content-Type: application/json
 
 {
@@ -71,6 +73,25 @@ Content-Type: application/json
   "email": "Thu@callme.fr",
   "ville": "Space",
   "pays": "France"
+}
+
+###
+
+### Modifier un utilisateur en admin (SECRETAIRE / PRESIDENT)
+### Permet aussi de modifier le rôle et le niveau d'expertise
+PATCH {{baseUrl}}/api/utilisateurs/1/admin
+X-Role: SECRETAIRE
+X-Utilisateur-Id: 3
+Content-Type: application/json
+
+{
+  "nom": "Test",
+  "prenom": "Thu",
+  "email": "Thu@callme.fr",
+  "ville": "Space",
+  "pays": "France",
+  "niveauExpertise": 3,
+  "role": "ENSEIGNANT"
 }
 
 ###

@@ -1,30 +1,19 @@
-const dbName = "competition_db";
-const competitionDb = db.getSiblingDB(dbName);
+const competitionDb = db.getSiblingDB("competition_db");
 
 competitionDb.createCollection("competitions");
 competitionDb.createCollection("resultats");
 
-competitionDb.competitions.deleteMany({ _id: { $in: [
-    "comp-n1-initiation", "comp-n2-technique", "comp-n3-choregraphie", "comp-n4-avance", "comp-n5-masterclass"
-]}});
-
-competitionDb.resultats.deleteMany({ _id: { $in: [
-    "res-comp-n1-membre5", "res-comp-n2-membre6",
-    "res-comp-n3-membre7", "res-comp-n3-membre10",
-    "res-comp-n4-membre8", "res-comp-n5-membre9"
-]}});
+competitionDb.competitions.deleteMany({});
+competitionDb.resultats.deleteMany({});
 
 const now = new Date();
-
 function futureDate(days) {
     return new Date(now.getFullYear(), now.getMonth(), now.getDate() + days, 0, 0, 0);
 }
-
 function localTime(hour, minute) {
     return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00`;
 }
 
-// 5 compétitions, une par niveau
 competitionDb.competitions.insertMany([
     {
         _id: "comp-n1-initiation",
@@ -73,12 +62,11 @@ competitionDb.competitions.insertMany([
         date: futureDate(24),
         heureDebut: localTime(17, 0),
         duree: 120,
-        lieu: "Grande Salle",
+        lieu: "Grande salle",
         enseignantId: NumberLong(4)
     }
 ]);
 
-// Résultats — plusieurs par compétition pour niv 3 (membres 7 et 10 sont tous deux niv 3)
 competitionDb.resultats.insertMany([
     {
         _id: "res-comp-n1-membre5",
@@ -102,14 +90,6 @@ competitionDb.resultats.insertMany([
         eleveId: NumberLong(7),
         enseignantId: NumberLong(3),
         note: NumberDecimal("8.7"),
-        competitionDate: futureDate(22)
-    },
-    {
-        _id: "res-comp-n3-membre10",
-        competitionId: "comp-n3-choregraphie",
-        eleveId: NumberLong(10),
-        enseignantId: NumberLong(3),
-        note: NumberDecimal("7.5"),
         competitionDate: futureDate(22)
     },
     {

@@ -1,5 +1,6 @@
 package fr.miage.toulouse.callme.utilisateurms.controller;
 
+import fr.miage.toulouse.callme.utilisateurms.DTO.AdminUpdateUtilisateurRequest;
 import fr.miage.toulouse.callme.utilisateurms.DTO.LoginRequest;
 import fr.miage.toulouse.callme.utilisateurms.DTO.UpdateUtilisateurRequest;
 import fr.miage.toulouse.callme.utilisateurms.DTO.UtilisateurCreationRequest;
@@ -29,7 +30,6 @@ public class UtilisateurController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
     public ResponseEntity<UtilisateurResponse> creer(@Valid @RequestBody UtilisateurCreationRequest u) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.creer(u));
     }
@@ -40,17 +40,25 @@ public class UtilisateurController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT')")
+    @PreAuthorize("hasAnyRole('MEMBRE', 'ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT')")
     public List<UtilisateurResponse> lister() {
         return service.lister();
     }
 
     @PatchMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
     public UtilisateurResponse modifier(
             @PathVariable Long id,
-            @RequestBody UpdateUtilisateurRequest request) {
-        return service.modifier(id, request);
+            @RequestHeader(value = "X-Utilisateur-Id", required = false) Long utilisateurConnecteId,
+            @Valid @RequestBody UpdateUtilisateurRequest request) {
+        return service.modifier(id, utilisateurConnecteId, request);
+    }
+
+    @PatchMapping("/{id}/admin")
+    @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
+    public UtilisateurResponse modifierAdmin(
+            @PathVariable Long id,
+            @Valid @RequestBody AdminUpdateUtilisateurRequest request) {
+        return service.modifierAdmin(id, request);
     }
 
     @DeleteMapping("/{id}")

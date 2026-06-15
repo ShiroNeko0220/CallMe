@@ -14,7 +14,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -73,7 +72,7 @@ class BadgeServiceTests {
     }
 
     @Test
-    void getBadgeById_introuvable() {
+    void getBadgeById_nonExistant() {
         when(badgeRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> badgeService.getBadgeById(99L))
@@ -154,7 +153,7 @@ class BadgeServiceTests {
     }
 
     @Test
-    void supprimerBadge_introuvable() {
+    void supprimerBadge_nonExistant() {
         when(badgeRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> badgeService.supprimerBadge(99L))

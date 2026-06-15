@@ -11,13 +11,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class ResultatRequest {
 
-    @NotBlank
-    private String competitionId;
-
     @NotNull
     private Long eleveId;
 
-    @NotNull
     private Long enseignantId;
 
     @NotNull

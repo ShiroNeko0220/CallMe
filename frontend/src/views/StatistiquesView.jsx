@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BarChart2, Users, BookOpen, Trophy, TrendingUp, CheckCircle, XCircle } from 'lucide-react'
 import { api } from '../api'
-import { Card, Alert, BadgeTag, Spinner } from '../components/Card'
+import { Card, Alert, Spinner } from '../components/Card'
 
 function KpiCard({ label, value, color = 'blue' }) {
   const colors = {
@@ -227,7 +227,7 @@ export default function StatistiquesView({ role }) {
 
         <div className="flex gap-2 mb-3">
           <div className="flex-1">
-            <label className="block text-xs text-gray-400 mb-1">Période - du <span className="italic">(optionnel)</span></label>
+            <label className="block text-xs text-gray-400 mb-1">Du </label>
             <input type="date" value={periodeDebut} onChange={e => setPeriodeDebut(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
           </div>

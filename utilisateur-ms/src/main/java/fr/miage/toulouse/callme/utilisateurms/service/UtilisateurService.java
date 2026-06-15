@@ -1,6 +1,7 @@
 package fr.miage.toulouse.callme.utilisateurms.service;
 
 import fr.miage.toulouse.callme.libcommun.ApiException;
+import fr.miage.toulouse.callme.utilisateurms.DTO.AdminUpdateUtilisateurRequest;
 import fr.miage.toulouse.callme.utilisateurms.DTO.UpdateUtilisateurRequest;
 import fr.miage.toulouse.callme.utilisateurms.DTO.UtilisateurCreationRequest;
 import fr.miage.toulouse.callme.utilisateurms.DTO.UtilisateurResponse;
@@ -40,15 +41,17 @@ public class UtilisateurService {
         request.getIdConnexion().setMdp(passwordEncoder.encode(request.getIdConnexion().getMdp()));
         u.setIdConnexion(request.getIdConnexion());
         u.setAdresse(request.getAdresse());
-        u.setRole(request.getRole() != null ? request.getRole() : Role.MEMBRE);
-        u.setNiveauExpertise(request.getNiveauExpertise() != null && request.getNiveauExpertise() > 0 ? request.getNiveauExpertise() : 1);
+        // Inscription publique : un nouveau compte est toujours un membre niveau 1.
+        // Le rôle et le niveau ne peuvent être changés que via PATCH /utilisateurs/{id}/admin.
+        u.setRole(Role.MEMBRE);
+        u.setNiveauExpertise(1);
         Utilisateur saved = repo.save(u);
         publishUtilisateur(saved);
         return toDTO(saved);
     }
 
     private Utilisateur findById(Long id) {
-        return repo.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Utilisateur introuvable"));
+        return repo.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Utilisateur non existant"));
     }
 
     public UtilisateurResponse consulter(Long id) {
@@ -59,18 +62,22 @@ public class UtilisateurService {
         return repo.findAll().stream().map(this::toDTO).toList();
     }
 
-    public UtilisateurResponse modifier(Long id, UpdateUtilisateurRequest request) {
-        Utilisateur u = findById(id);
-
-        if (request.getNom() != null)    u.setNom(request.getNom());
-        if (request.getPrenom() != null) u.setPrenom(request.getPrenom());
-        if (request.getEmail() != null)  u.setEmail(request.getEmail());
-
-        if (request.getVille() != null || request.getPays() != null) {
-            if (u.getAdresse() == null) u.setAdresse(new Adresse());
-            if (request.getVille() != null) u.getAdresse().setVille(request.getVille());
-            if (request.getPays()  != null) u.getAdresse().setPays(request.getPays());
+    public UtilisateurResponse modifier(Long id, Long utilisateurConnecteId, UpdateUtilisateurRequest request) {
+        if (utilisateurConnecteId == null || !utilisateurConnecteId.equals(id)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Vous ne pouvez modifier que votre propre profil");
         }
+
+        Utilisateur u = findById(id);
+        appliquerInfosPersonnelles(u, request.getNom(), request.getPrenom(), request.getEmail(), request.getVille(), request.getPays());
+
+        Utilisateur saved = repo.save(u);
+        publishUtilisateur(saved);
+        return toDTO(saved);
+    }
+
+    public UtilisateurResponse modifierAdmin(Long id, AdminUpdateUtilisateurRequest request) {
+        Utilisateur u = findById(id);
+        appliquerInfosPersonnelles(u, request.getNom(), request.getPrenom(), request.getEmail(), request.getVille(), request.getPays());
 
         if (request.getNiveauExpertise() != null) u.setNiveauExpertise(request.getNiveauExpertise());
         if (request.getRole() != null)            u.setRole(request.getRole());
@@ -78,6 +85,18 @@ public class UtilisateurService {
         Utilisateur saved = repo.save(u);
         publishUtilisateur(saved);
         return toDTO(saved);
+    }
+
+    private void appliquerInfosPersonnelles(Utilisateur u, String nom, String prenom, String email, String ville, String pays) {
+        if (nom != null)    u.setNom(nom);
+        if (prenom != null) u.setPrenom(prenom);
+        if (email != null)  u.setEmail(email);
+
+        if (ville != null || pays != null) {
+            if (u.getAdresse() == null) u.setAdresse(new Adresse());
+            if (ville != null) u.getAdresse().setVille(ville);
+            if (pays  != null) u.getAdresse().setPays(pays);
+        }
     }
 
     private void publishUtilisateur(Utilisateur u) {
@@ -118,7 +137,7 @@ public class UtilisateurService {
 
     public void supprimer(Long id) {
         if (!repo.existsById(id)) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "Utilisateur introuvable");
+            throw new ApiException(HttpStatus.NOT_FOUND, "Utilisateur non existant");
         }
         repo.deleteById(id);
     }

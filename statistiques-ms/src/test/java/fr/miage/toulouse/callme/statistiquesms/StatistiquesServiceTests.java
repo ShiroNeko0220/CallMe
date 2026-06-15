@@ -73,12 +73,12 @@ class StatistiquesServiceTests {
     }
 
     @Test
-    void coursPourEleveAvecPresence_eleveIntrouvable() {
+    void coursPourEleveAvecPresence_eleveNonExistant() {
         when(eleveRepo.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.coursPourEleveAvecPresence(99L, null, null))
                 .isInstanceOf(ApiException.class)
-                .hasMessage("Élève introuvable");
+                .hasMessage("Élève non existant");
     }
 
     @Test
