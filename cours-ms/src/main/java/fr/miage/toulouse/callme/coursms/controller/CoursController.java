@@ -52,14 +52,20 @@ public class CoursController {
     }
 
     @PatchMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
-    public CoursResponse modifier(@PathVariable Long id, @RequestBody CoursRequest request) {
-        return service.modifier(id, request);
+    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT')")
+    public CoursResponse modifier(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte,
+            @RequestHeader(value = "X-Utilisateur-Id", required = false) Long utilisateurConnecteId,
+            @RequestBody CoursRequest request) {
+        return service.modifier(id, request, roleConnecte, utilisateurConnecteId);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('PRESIDENT')")
-    public ResponseEntity<Void> supprimer(@PathVariable Long id) {
+    public ResponseEntity<Void> supprimer(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte) {
         service.supprimer(id);
         return ResponseEntity.noContent().build();
     }

@@ -32,7 +32,8 @@ public class PresenceController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
-    public List<PresenceResponse> lister() {
+    public List<PresenceResponse> lister(
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte) {
         return service.lister();
     }
 

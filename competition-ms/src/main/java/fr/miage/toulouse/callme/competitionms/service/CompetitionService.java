@@ -47,11 +47,7 @@ public class CompetitionService {
 
         verifierNiveau(request.getNiveauCible());
         verifierDate(request.getDate());
-
-        Boolean apte = utilisateurClient.enseignantApte(request.getEnseignantId(), request.getNiveauCible());
-        if (!Boolean.TRUE.equals(apte)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Enseignant non apte pour ce niveau");
-        }
+        verifierEnseignantApte(request.getEnseignantId(), request.getNiveauCible());
 
         Competition competition = new Competition();
         competition.setTitre(request.getTitre());
@@ -63,20 +59,18 @@ public class CompetitionService {
         competition.setEnseignantId(request.getEnseignantId());
 
         Competition saved = competitionRepo.save(competition);
-
-        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.KEY_COMPETITION, Map.of(
-                "id", saved.getId(),
-                "titre", saved.getTitre(),
-                "niveauCible", saved.getNiveauCible(),
-                "date", saved.getDate().toString()
-        ));
-
+        publierCompetition(saved);
         return toDTO(saved);
     }
 
     private Competition findById(String id) {
         return competitionRepo.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Competition non existante"));
+    }
+
+    private Resultat findResultatById(String id) {
+        return resultatRepo.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Résultat non existant"));
     }
 
     @Transactional(readOnly = true)
@@ -107,22 +101,49 @@ public class CompetitionService {
     }
 
     @Transactional
-    public ResultatResponse ajouterResultat(String competitionId, Long utilisateurConnecteId, ResultatRequest request) {
-        if (utilisateurConnecteId == null) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Utilisateur connecté obligatoire pour saisir un résultat");
+    public CompetitionResponse modifier(String id, CompetitionRequest request, String roleConnecte, Long utilisateurConnecteId) {
+        Competition competition = findById(id);
+        verifierDroitCompetition(competition, roleConnecte, utilisateurConnecteId, "modifier");
+
+        if (request.getTitre() != null) {
+            competition.setTitre(request.getTitre());
+        }
+        if (request.getNiveauCible() != null) {
+            verifierNiveau(request.getNiveauCible());
+            competition.setNiveauCible(request.getNiveauCible());
+        }
+        if (request.getDate() != null) {
+            verifierDate(request.getDate());
+            competition.setDate(request.getDate());
+        }
+        if (request.getHeureDebut() != null) {
+            competition.setHeureDebut(request.getHeureDebut());
+        }
+        if (request.getDuree() != null) {
+            verifierDuree(request.getDuree());
+            competition.setDuree(request.getDuree());
+        }
+        if (request.getLieu() != null) {
+            competition.setLieu(request.getLieu());
+        }
+        if (request.getEnseignantId() != null) {
+            if ("ENSEIGNANT".equals(roleConnecte) && !request.getEnseignantId().equals(utilisateurConnecteId)) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "Un enseignant ne peut pas transférer sa compétition à un autre enseignant");
+            }
+            competition.setEnseignantId(request.getEnseignantId());
         }
 
+        verifierEnseignantApte(competition.getEnseignantId(), competition.getNiveauCible());
+        Competition saved = competitionRepo.save(competition);
+        publierCompetition(saved);
+        return toDTO(saved);
+    }
+
+    @Transactional
+    public ResultatResponse ajouterResultat(String competitionId, String roleConnecte, Long utilisateurConnecteId, ResultatRequest request) {
         Competition competition = findById(competitionId);
+        verifierDroitCompetition(competition, roleConnecte, utilisateurConnecteId, "saisir un résultat pour");
         verifierNote(request.getNote());
-
-        if (!utilisateurConnecteId.equals(competition.getEnseignantId())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Seul l'enseignant responsable de la compétition peut saisir un résultat");
-        }
-
-        String roleEnseignant = utilisateurClient.getRoleUtilisateur(utilisateurConnecteId);
-        if (!"ENSEIGNANT".equals(roleEnseignant)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Seul un enseignant peut saisir un résultat");
-        }
 
         Integer niveauEleve = utilisateurClient.getNiveauUtilisateur(request.getEleveId());
         if (niveauEleve == null || niveauEleve != competition.getNiveauCible()) {
@@ -138,20 +159,43 @@ public class CompetitionService {
         resultat.setCompetitionId(competition.getId());
         resultat.setCompetitionDate(competition.getDate());
         resultat.setEleveId(request.getEleveId());
-        resultat.setEnseignantId(utilisateurConnecteId);
+        resultat.setEnseignantId(competition.getEnseignantId());
         resultat.setNote(request.getNote());
 
         Resultat saved = resultatRepo.save(resultat);
+        publierResultat(saved);
+        return toResultatDTO(saved);
+    }
 
-        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.KEY_RESULTAT, Map.of(
-                "id", saved.getId(),
-                "competitionId", saved.getCompetitionId(),
-                "eleveId", saved.getEleveId(),
-                "enseignantId", saved.getEnseignantId(),
-                "note", saved.getNote().toString(),
-                "competitionDate", saved.getCompetitionDate().toString()
-        ));
+    @Transactional
+    public ResultatResponse modifierResultat(String resultatId, String roleConnecte, Long utilisateurConnecteId, ResultatRequest request) {
+        Resultat resultat = findResultatById(resultatId);
+        Competition competition = findById(resultat.getCompetitionId());
+        verifierDroitCompetition(competition, roleConnecte, utilisateurConnecteId, "modifier un résultat pour");
 
+        if (request.getNote() != null) {
+            verifierNote(request.getNote());
+            resultat.setNote(request.getNote());
+        }
+
+        if (request.getEleveId() != null && !request.getEleveId().equals(resultat.getEleveId())) {
+            Integer niveauEleve = utilisateurClient.getNiveauUtilisateur(request.getEleveId());
+            if (niveauEleve == null || niveauEleve != competition.getNiveauCible()) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "L'élève n'appartient pas au niveau de cette compétition");
+            }
+            resultatRepo.findByCompetitionIdAndEleveId(competition.getId(), request.getEleveId())
+                    .filter(r -> !r.getId().equals(resultat.getId()))
+                    .ifPresent(r -> {
+                        throw new ApiException(HttpStatus.CONFLICT, "Résultat déjà saisi pour cet élève");
+                    });
+            resultat.setEleveId(request.getEleveId());
+        }
+
+        resultat.setCompetitionDate(competition.getDate());
+        resultat.setEnseignantId(competition.getEnseignantId());
+
+        Resultat saved = resultatRepo.save(resultat);
+        publierResultat(saved);
         return toResultatDTO(saved);
     }
 
@@ -165,11 +209,19 @@ public class CompetitionService {
     }
 
     public List<ResultatResponse> listerResultatsPourEleveSurPeriode(Long eleveId, LocalDate debut, LocalDate fin) {
-        if (debut == null || fin == null) {
-            return listerResultatsPourEleve(eleveId);
+        if (debut != null && fin != null) {
+            return resultatRepo.findByEleveIdAndCompetitionDateBetween(eleveId, debut, fin)
+                    .stream().map(this::toResultatDTO).toList();
         }
-        return resultatRepo.findByEleveIdAndCompetitionDateBetween(eleveId, debut, fin)
-                .stream().map(this::toResultatDTO).toList();
+        if (debut != null) {
+            return resultatRepo.findByEleveIdAndCompetitionDateGreaterThanEqual(eleveId, debut)
+                    .stream().map(this::toResultatDTO).toList();
+        }
+        if (fin != null) {
+            return resultatRepo.findByEleveIdAndCompetitionDateLessThanEqual(eleveId, fin)
+                    .stream().map(this::toResultatDTO).toList();
+        }
+        return listerResultatsPourEleve(eleveId);
     }
 
     private CompetitionResponse toDTO(Competition c) {
@@ -206,6 +258,46 @@ public class CompetitionService {
         competitionRepo.delete(competition);
     }
 
+    private void verifierDroitCompetition(Competition competition, String roleConnecte, Long utilisateurConnecteId, String action) {
+        if ("PRESIDENT".equals(roleConnecte)) {
+            return;
+        }
+        if ("ENSEIGNANT".equals(roleConnecte)
+                && utilisateurConnecteId != null
+                && utilisateurConnecteId.equals(competition.getEnseignantId())) {
+            return;
+        }
+        throw new ApiException(HttpStatus.FORBIDDEN,
+                "Seul le président ou l'enseignant responsable peut " + action + " cette compétition");
+    }
+
+    private void verifierEnseignantApte(Long enseignantId, Integer niveauCible) {
+        Boolean apte = utilisateurClient.enseignantApte(enseignantId, niveauCible);
+        if (!Boolean.TRUE.equals(apte)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Enseignant non apte pour ce niveau");
+        }
+    }
+
+    private void publierCompetition(Competition saved) {
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.KEY_COMPETITION, Map.of(
+                "id", saved.getId(),
+                "titre", saved.getTitre(),
+                "niveauCible", saved.getNiveauCible(),
+                "date", saved.getDate().toString()
+        ));
+    }
+
+    private void publierResultat(Resultat saved) {
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.KEY_RESULTAT, Map.of(
+                "id", saved.getId(),
+                "competitionId", saved.getCompetitionId(),
+                "eleveId", saved.getEleveId(),
+                "enseignantId", saved.getEnseignantId(),
+                "note", saved.getNote().toString(),
+                "competitionDate", saved.getCompetitionDate().toString()
+        ));
+    }
+
     private void verifierNiveau(Integer niveau) {
         if (niveau == null || niveau < 1 || niveau > 5) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Niveau invalide entre 1 et 5");
@@ -220,6 +312,12 @@ public class CompetitionService {
         LocalDate dateMin = LocalDate.now().plusDays(7);
         if (!date.isAfter(dateMin)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "La date doit être supérieure à 7 jours calendaires");
+        }
+    }
+
+    private void verifierDuree(Integer duree) {
+        if (duree == null || duree < 45) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Durée invalide (45min minimum)");
         }
     }
 

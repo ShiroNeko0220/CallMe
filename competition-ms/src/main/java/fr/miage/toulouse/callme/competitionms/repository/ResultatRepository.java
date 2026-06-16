@@ -15,4 +15,8 @@ public interface ResultatRepository extends MongoRepository<Resultat, String> {
     List<Resultat> findByCompetitionId(String competitionId);
 
     List<Resultat> findByEleveIdAndCompetitionDateBetween(Long eleveId, LocalDate debut, LocalDate fin);
+
+    List<Resultat> findByEleveIdAndCompetitionDateGreaterThanEqual(Long eleveId, LocalDate debut);
+
+    List<Resultat> findByEleveIdAndCompetitionDateLessThanEqual(Long eleveId, LocalDate fin);
 }

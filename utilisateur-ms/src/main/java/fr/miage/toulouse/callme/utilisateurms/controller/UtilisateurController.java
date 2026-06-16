@@ -41,7 +41,8 @@ public class UtilisateurController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('MEMBRE', 'ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT')")
-    public List<UtilisateurResponse> lister() {
+    public List<UtilisateurResponse> lister(
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte) {
         return service.lister();
     }
 
@@ -57,13 +58,16 @@ public class UtilisateurController {
     @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
     public UtilisateurResponse modifierAdmin(
             @PathVariable Long id,
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte,
             @Valid @RequestBody AdminUpdateUtilisateurRequest request) {
         return service.modifierAdmin(id, request);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('PRESIDENT')")
-    public ResponseEntity<Void> supprimer(@PathVariable Long id) {
+    public ResponseEntity<Void> supprimer(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte) {
         service.supprimer(id);
         return ResponseEntity.noContent().build();
     }

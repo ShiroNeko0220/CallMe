@@ -57,20 +57,7 @@ public class CoursService {
 
         Cours saved = repo.save(cours);
 
-        rabbitTemplate.convertAndSend(
-                RabbitMQConfig.EXCHANGE,
-                RabbitMQConfig.KEY_COURS,
-                Map.of(
-                        "id", saved.getId(),
-                        "titre", saved.getTitre(),
-                        "niveauCible", saved.getNiveauCible(),
-                        "date", saved.getDate().toString(),
-                        "heureDebut", saved.getHeureDebut().toString(),
-                        "duree", saved.getDuree(),
-                        "enseignantId", saved.getEnseignantId()
-                )
-        );
-
+        publierCours(saved);
         return toDTO(saved);
     }
 
@@ -96,14 +83,19 @@ public class CoursService {
         return repo.findByNiveauCible(niveau).stream().map(this::toDTO).toList();
     }
 
-    public CoursResponse modifier(Long id, CoursRequest request) {
+    public CoursResponse modifier(Long id, CoursRequest request, String roleConnecte, Long utilisateurConnecteId) {
         Cours old = findById(id);
+
+        if ("ENSEIGNANT".equals(roleConnecte) && (utilisateurConnecteId == null || !utilisateurConnecteId.equals(old.getEnseignantId()))) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Un enseignant ne peut modifier que ses propres cours");
+        }
 
         if (request.getTitre() != null) {
             old.setTitre(request.getTitre());
         }
 
         if (request.getDate() != null) {
+            verifierDateCours(request.getDate());
             old.setDate(request.getDate());
         }
 
@@ -126,19 +118,41 @@ public class CoursService {
         }
 
         if (request.getEnseignantId() != null) {
-            Boolean apte = utilisateurClient.enseignantApte(request.getEnseignantId(), old.getNiveauCible());
-            if (!Boolean.TRUE.equals(apte)) {
-                throw new ApiException(HttpStatus.FORBIDDEN, "Enseignant non apte pour ce niveau");
+            if ("ENSEIGNANT".equals(roleConnecte) && !request.getEnseignantId().equals(utilisateurConnecteId)) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "Un enseignant ne peut pas transférer son cours à un autre enseignant");
             }
             old.setEnseignantId(request.getEnseignantId());
         }
 
-        return toDTO(repo.save(old));
+        Boolean apte = utilisateurClient.enseignantApte(old.getEnseignantId(), old.getNiveauCible());
+        if (!Boolean.TRUE.equals(apte)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Enseignant non apte pour ce niveau");
+        }
+
+        Cours saved = repo.save(old);
+        publierCours(saved);
+        return toDTO(saved);
     }
 
     public void supprimer(Long id) {
         Cours cours = findById(id);
         repo.delete(cours);
+    }
+
+    private void publierCours(Cours saved) {
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE,
+                RabbitMQConfig.KEY_COURS,
+                Map.of(
+                        "id", saved.getId(),
+                        "titre", saved.getTitre(),
+                        "niveauCible", saved.getNiveauCible(),
+                        "date", saved.getDate().toString(),
+                        "heureDebut", saved.getHeureDebut().toString(),
+                        "duree", saved.getDuree(),
+                        "enseignantId", saved.getEnseignantId()
+                )
+        );
     }
 
     private CoursResponse toDTO(Cours cours) {

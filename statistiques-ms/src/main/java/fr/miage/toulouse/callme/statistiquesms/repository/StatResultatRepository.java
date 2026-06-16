@@ -9,4 +9,6 @@ import java.util.List;
 public interface StatResultatRepository extends JpaRepository<StatResultat, String> {
     List<StatResultat> findByEleveId(Long eleveId);
     List<StatResultat> findByEleveIdAndCompetitionDateBetween(Long eleveId, LocalDate debut, LocalDate fin);
+    List<StatResultat> findByEleveIdAndCompetitionDateGreaterThanEqual(Long eleveId, LocalDate debut);
+    List<StatResultat> findByEleveIdAndCompetitionDateLessThanEqual(Long eleveId, LocalDate fin);
 }

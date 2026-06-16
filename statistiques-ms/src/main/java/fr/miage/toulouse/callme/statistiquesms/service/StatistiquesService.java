@@ -57,9 +57,7 @@ public class StatistiquesService {
 
         List<StatCours> coursNiveau = coursRepo.findByNiveauCible(eleve.getNiveauExpertise());
 
-        List<StatPresence> presences = (debut != null && fin != null)
-                ? presenceRepo.findByIdPorteurAndDateBadgeageBetween(eleveId, debut.atStartOfDay(), fin.atTime(LocalTime.MAX))
-                : presenceRepo.findByIdPorteur(eleveId);
+        List<StatPresence> presences = presencesPourPeriode(eleveId, debut, fin);
 
         Set<Long> coursPresents = presences.stream().map(StatPresence::getIdCours).collect(Collectors.toSet());
 
@@ -75,11 +73,32 @@ public class StatistiquesService {
     }
 
     public List<ResultatStatResponse> resultatsCompetitionEleve(Long eleveId, LocalDate debut, LocalDate fin) {
-        List<StatResultat> resultats = (debut != null && fin != null)
-                ? resultatRepo.findByEleveIdAndCompetitionDateBetween(eleveId, debut, fin)
-                : resultatRepo.findByEleveId(eleveId);
+        List<StatResultat> resultats;
+        if (debut != null && fin != null) {
+            resultats = resultatRepo.findByEleveIdAndCompetitionDateBetween(eleveId, debut, fin);
+        } else if (debut != null) {
+            resultats = resultatRepo.findByEleveIdAndCompetitionDateGreaterThanEqual(eleveId, debut);
+        } else if (fin != null) {
+            resultats = resultatRepo.findByEleveIdAndCompetitionDateLessThanEqual(eleveId, fin);
+        } else {
+            resultats = resultatRepo.findByEleveId(eleveId);
+        }
+
         return resultats.stream()
                 .map(r -> new ResultatStatResponse(r.getId(), r.getCompetitionId(), r.getEleveId(), r.getEnseignantId(), r.getNote(), r.getCompetitionDate()))
                 .toList();
+    }
+
+    private List<StatPresence> presencesPourPeriode(Long eleveId, LocalDate debut, LocalDate fin) {
+        if (debut != null && fin != null) {
+            return presenceRepo.findByIdPorteurAndDateBadgeageBetween(eleveId, debut.atStartOfDay(), fin.atTime(LocalTime.MAX));
+        }
+        if (debut != null) {
+            return presenceRepo.findByIdPorteurAndDateBadgeageGreaterThanEqual(eleveId, debut.atStartOfDay());
+        }
+        if (fin != null) {
+            return presenceRepo.findByIdPorteurAndDateBadgeageLessThanEqual(eleveId, fin.atTime(LocalTime.MAX));
+        }
+        return presenceRepo.findByIdPorteur(eleveId);
     }
 }

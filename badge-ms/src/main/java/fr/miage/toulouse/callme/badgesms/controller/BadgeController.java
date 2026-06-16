@@ -4,12 +4,11 @@ import fr.miage.toulouse.callme.badgesms.DTO.BadgeRequest;
 import fr.miage.toulouse.callme.badgesms.DTO.BadgeResponse;
 import fr.miage.toulouse.callme.badgesms.service.BadgeService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import java.util.List;
 
 @RestController
@@ -24,7 +23,9 @@ public class BadgeController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
-    public ResponseEntity<BadgeResponse> creer(@Valid @RequestBody BadgeRequest badgeRequest) {
+    public ResponseEntity<BadgeResponse> creer(
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte,
+            @Valid @RequestBody BadgeRequest badgeRequest) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.creerBadge(badgeRequest));
     }
 
@@ -40,19 +41,26 @@ public class BadgeController {
 
     @PatchMapping("/{idBadge}/associer/{idPorteur}")
     @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
-    public BadgeResponse associer(@PathVariable Long idBadge, @PathVariable Long idPorteur) {
+    public BadgeResponse associer(
+            @PathVariable Long idBadge,
+            @PathVariable Long idPorteur,
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte) {
         return service.associerBadge(idBadge, idPorteur);
     }
 
     @PatchMapping("/{idBadge}/dissocier")
     @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
-    public BadgeResponse dissocier(@PathVariable Long idBadge) {
+    public BadgeResponse dissocier(
+            @PathVariable Long idBadge,
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte) {
         return service.dissocierBadge(idBadge);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('PRESIDENT')")
-    public ResponseEntity<Void> supprimer(@PathVariable Long id) {
+    public ResponseEntity<Void> supprimer(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte) {
         service.supprimerBadge(id);
         return ResponseEntity.noContent().build();
     }

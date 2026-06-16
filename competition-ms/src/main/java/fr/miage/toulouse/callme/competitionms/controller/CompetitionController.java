@@ -59,9 +59,21 @@ public class CompetitionController {
         return competitionService.listerPourEleve(eleveId);
     }
 
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'PRESIDENT')")
+    public CompetitionResponse modifier(
+            @PathVariable String id,
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte,
+            @RequestHeader(value = "X-Utilisateur-Id", required = false) Long utilisateurConnecteId,
+            @RequestBody CompetitionRequest request) {
+        return competitionService.modifier(id, request, roleConnecte, utilisateurConnecteId);
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('PRESIDENT')")
-    public ResponseEntity<Void> supprimer(@PathVariable String id) {
+    public ResponseEntity<Void> supprimer(
+            @PathVariable String id,
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte) {
         competitionService.supprimer(id);
         return ResponseEntity.noContent().build();
     }
@@ -70,9 +82,20 @@ public class CompetitionController {
     @PreAuthorize("hasAnyRole('ENSEIGNANT', 'PRESIDENT')")
     public ResponseEntity<ResultatResponse> ajouterResultat(
             @PathVariable String competitionId,
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte,
             @RequestHeader(value = "X-Utilisateur-Id", required = false) Long utilisateurConnecteId,
             @Valid @RequestBody ResultatRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(competitionService.ajouterResultat(competitionId, utilisateurConnecteId, request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(competitionService.ajouterResultat(competitionId, roleConnecte, utilisateurConnecteId, request));
+    }
+
+    @PatchMapping("/resultats/{resultatId}")
+    @PreAuthorize("hasAnyRole('ENSEIGNANT', 'PRESIDENT')")
+    public ResultatResponse modifierResultat(
+            @PathVariable String resultatId,
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte,
+            @RequestHeader(value = "X-Utilisateur-Id", required = false) Long utilisateurConnecteId,
+            @RequestBody ResultatRequest request) {
+        return competitionService.modifierResultat(resultatId, roleConnecte, utilisateurConnecteId, request);
     }
 
     @GetMapping("/{competitionId}/resultats")

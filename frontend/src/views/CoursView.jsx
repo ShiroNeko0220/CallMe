@@ -10,6 +10,7 @@ const dateMin8 = () => {
 }
 
 const selectCls = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+const heure = (v) => v ? String(v).slice(0, 5) : ''
 
 export default function CoursView({ role, currentUser }) {
   const [cours, setCours] = useState([])
@@ -19,6 +20,8 @@ export default function CoursView({ role, currentUser }) {
   const [showForm, setShowForm] = useState(false)
   const [filtreNiveau, setFiltreNiveau] = useState('')
   const [confirm, setConfirm] = useState(null)
+  const [editId, setEditId] = useState(null)
+  const [editForm, setEditForm] = useState(null)
   const [form, setForm] = useState({
     titre: '', date: '', heureDebut: '', duree: 60,
     lieu: '', niveauCible: 1, enseignantId: '',
@@ -64,6 +67,18 @@ export default function CoursView({ role, currentUser }) {
     }
   }
 
+  const validerPayload = (payload) => {
+    if (!payload.titre?.trim()) return 'Le titre du cours est obligatoire.'
+    if (!payload.date) return 'La date du cours est obligatoire.'
+    if (!payload.heureDebut) return 'L’heure de début est obligatoire.'
+    if (!payload.duree || payload.duree < 45) return 'La durée doit être au moins de 45 minutes.'
+    if (!payload.enseignantId) return 'Veuillez choisir un enseignant.'
+    if (enseignant && payload.niveauCible > currentUser.niveauExpertise) {
+      return `Vous êtes apte jusqu’au niveau ${currentUser.niveauExpertise}. Vous ne pouvez pas gérer un cours de niveau ${payload.niveauCible}.`
+    }
+    return null
+  }
+
   const creer = async () => {
     const payload = {
       ...form,
@@ -72,12 +87,8 @@ export default function CoursView({ role, currentUser }) {
       enseignantId: enseignant ? currentUser.id : Number(form.enseignantId),
     }
 
-    if (!payload.titre.trim()) return setAlert({ type: 'error', message: 'Le titre du cours est obligatoire.' })
-    if (!payload.date) return setAlert({ type: 'error', message: 'La date du cours est obligatoire.' })
-    if (!payload.enseignantId) return setAlert({ type: 'error', message: 'Veuillez choisir un enseignant.' })
-    if (enseignant && payload.niveauCible > currentUser.niveauExpertise) {
-      return setAlert({ type: 'error', message: `Vous êtes apte jusqu’au niveau ${currentUser.niveauExpertise}. Vous ne pouvez pas créer un cours de niveau ${payload.niveauCible}.` })
-    }
+    const erreur = validerPayload(payload)
+    if (erreur) return setAlert({ type: 'error', message: erreur })
 
     try {
       await api.cours.creer(payload, role, currentUser?.id)
@@ -91,6 +102,43 @@ export default function CoursView({ role, currentUser }) {
     }
   }
 
+  const ouvrirEdition = (c) => {
+    setShowForm(false)
+    setEditId(c.id)
+    setEditForm({
+      titre: c.titre || '',
+      date: c.date || '',
+      heureDebut: heure(c.heureDebut),
+      duree: c.duree || 60,
+      lieu: c.lieu || '',
+      niveauCible: c.niveauCible || 1,
+      enseignantId: c.enseignantId || '',
+    })
+  }
+
+  const modifier = async () => {
+    const payload = {
+      ...editForm,
+      niveauCible: Number(editForm.niveauCible),
+      duree: Number(editForm.duree),
+      enseignantId: enseignant ? currentUser.id : Number(editForm.enseignantId),
+    }
+
+    const erreur = validerPayload(payload)
+    if (erreur) return setAlert({ type: 'error', message: erreur })
+
+    try {
+      await api.cours.modifier(editId, payload, role, currentUser?.id)
+      setAlert({ type: 'success', message: 'Cours modifié.' })
+      setEditId(null)
+      setEditForm(null)
+      charger()
+    } catch (e) {
+      const msg = e.response?.data?.error
+      setAlert({ type: 'error', message: msg || 'Impossible de modifier ce cours.' })
+    }
+  }
+
   const supprimer = (id) => {
     setConfirm({ message: 'Supprimer ce cours définitivement ?', onConfirm: async () => {
         setConfirm(null)
@@ -99,7 +147,7 @@ export default function CoursView({ role, currentUser }) {
           setAlert({ type: 'success', message: 'Cours supprimé.' })
           charger()
         } catch (e) {
-          setAlert({ type: 'error', message: 'Impossible de supprimer ce cours.' })
+          setAlert({ type: 'error', message: e.response?.data?.error || 'Impossible de supprimer ce cours.' })
         }
       }})
   }
@@ -110,6 +158,7 @@ export default function CoursView({ role, currentUser }) {
   }
 
   const f = (field, val) => setForm(p => ({ ...p, [field]: val }))
+  const ef = (field, val) => setEditForm(p => ({ ...p, [field]: val }))
   const niveauxPossibles = enseignant
       ? Array.from({ length: currentUser?.niveauExpertise || 1 }, (_, i) => i + 1)
       : [1, 2, 3, 4, 5]
@@ -120,6 +169,46 @@ export default function CoursView({ role, currentUser }) {
           ? 'Mes cours'
           : `${cours.length} cours`
 
+  const peutModifierCours = (c) => admin || (enseignant && Number(c.enseignantId) === Number(currentUser?.id))
+
+  const formulaireCours = (data, setField, onSubmit, titre, submitLabel, onCancel) => (
+      <Card title={titre}>
+        {enseignant && <p className="text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mb-3">Vous pouvez gérer uniquement vos propres cours et uniquement jusqu’au niveau {currentUser?.niveauExpertise}.</p>}
+        <p className="text-xs text-gray-400 mb-3"><span className="text-red-500">*</span> Champ obligatoire</p>
+        <div className="grid grid-cols-2 gap-x-4">
+          <Input label="Titre" required value={data.titre} onChange={e => setField('titre', e.target.value)} placeholder="ex. Salsa débutant" />
+          <Input label="Date (au moins 7 jours à l'avance)" required value={data.date} onChange={e => setField('date', e.target.value)} type="date" min={dateMin8()} />
+          <Input label="Heure de début" required value={data.heureDebut} onChange={e => setField('heureDebut', e.target.value)} type="time" />
+          <Input label="Durée en minutes (45 min minimum)" required value={data.duree} onChange={e => { const n = parseInt(e.target.value); setField('duree', isNaN(n) || n < 45 ? 45 : n) }} type="number" min="45" />
+          <Input label="Lieu" optional value={data.lieu} onChange={e => setField('lieu', e.target.value)} placeholder="ex. Salle A" />
+          {admin ? (
+              <div className="mb-3">
+                <label className="block text-sm text-gray-600 mb-1">Enseignant <span className="text-red-500">*</span></label>
+                <select value={data.enseignantId} onChange={e => setField('enseignantId', Number(e.target.value))} className={selectCls}>
+                  <option value="">-- Choisir un enseignant --</option>
+                  {enseignants.map(e => <option key={e.id} value={e.id}>{e.prenom} {e.nom} - Niv. {e.niveauExpertise}</option>)}
+                </select>
+              </div>
+          ) : (
+              <div className="mb-3">
+                <label className="block text-sm text-gray-600 mb-1">Enseignant</label>
+                <input disabled value={`${currentUser?.prenom || ''} ${currentUser?.nom || ''}`} className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-500" />
+              </div>
+          )}
+          <div className="mb-3">
+            <label className="block text-sm text-gray-600 mb-1">Niveau cible <span className="text-red-500">*</span></label>
+            <select value={data.niveauCible} onChange={e => setField('niveauCible', Number(e.target.value))} className={selectCls}>
+              {niveauxPossibles.map(n => <option key={n} value={n}>Niveau {n}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="flex gap-2 mt-2">
+          <Btn onClick={onSubmit}>{submitLabel}</Btn>
+          <Btn variant="outline" onClick={onCancel}>Annuler</Btn>
+        </div>
+      </Card>
+  )
+
   return (
       <div>
         <ConfirmModal message={confirm?.message} onConfirm={confirm?.onConfirm} onCancel={() => setConfirm(null)} />
@@ -128,7 +217,7 @@ export default function CoursView({ role, currentUser }) {
           <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <BookOpen size={20} className="text-blue-600" /> Cours
           </h1>
-          {peutCreer && <Btn onClick={() => setShowForm(!showForm)}>+ Nouveau cours</Btn>}
+          {peutCreer && <Btn onClick={() => { setEditId(null); setEditForm(null); setShowForm(!showForm) }}>+ Nouveau cours</Btn>}
         </div>
 
         <Alert {...alert} onClose={() => setAlert(null)} />
@@ -144,43 +233,8 @@ export default function CoursView({ role, currentUser }) {
             </div>
         )}
 
-        {showForm && peutCreer && (
-            <Card title="Créer un cours">
-              {enseignant && <p className="text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mb-3">Vous créez un cours en tant qu’enseignant connecté. Vous pouvez créer uniquement des cours de niveau ≤ {currentUser?.niveauExpertise}.</p>}
-              <p className="text-xs text-gray-400 mb-3"><span className="text-red-500">*</span> Champ obligatoire</p>
-              <div className="grid grid-cols-2 gap-x-4">
-                <Input label="Titre" required value={form.titre} onChange={e => f('titre', e.target.value)} placeholder="ex. Salsa débutant" />
-                <Input label="Date (au moins 7 jours à l'avance)" required value={form.date} onChange={e => f('date', e.target.value)} type="date" min={dateMin8()} />
-                <Input label="Heure de début" required value={form.heureDebut} onChange={e => f('heureDebut', e.target.value)} type="time" />
-                <Input label="Durée en minutes (45 min minimum)" required value={form.duree} onChange={e => { const n = parseInt(e.target.value); f('duree', isNaN(n) || n < 45 ? 45 : n) }} type="number" min="45" />
-                <Input label="Lieu" optional value={form.lieu} onChange={e => f('lieu', e.target.value)} placeholder="ex. Salle A" />
-                {admin ? (
-                    <div className="mb-3">
-                      <label className="block text-sm text-gray-600 mb-1">Enseignant <span className="text-red-500">*</span></label>
-                      <select value={form.enseignantId} onChange={e => f('enseignantId', Number(e.target.value))} className={selectCls}>
-                        <option value="">-- Choisir un enseignant --</option>
-                        {enseignants.map(e => <option key={e.id} value={e.id}>{e.prenom} {e.nom} - Niv. {e.niveauExpertise}</option>)}
-                      </select>
-                    </div>
-                ) : (
-                    <div className="mb-3">
-                      <label className="block text-sm text-gray-600 mb-1">Enseignant</label>
-                      <input disabled value={`${currentUser?.prenom || ''} ${currentUser?.nom || ''}`} className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-500" />
-                    </div>
-                )}
-                <div className="mb-3">
-                  <label className="block text-sm text-gray-600 mb-1">Niveau cible</label>
-                  <select value={form.niveauCible} onChange={e => f('niveauCible', Number(e.target.value))} className={selectCls}>
-                    {niveauxPossibles.map(n => <option key={n} value={n}>Niveau {n}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="flex gap-2 mt-2">
-                <Btn onClick={creer}>Créer</Btn>
-                <Btn variant="outline" onClick={() => setShowForm(false)}>Annuler</Btn>
-              </div>
-            </Card>
-        )}
+        {showForm && peutCreer && formulaireCours(form, f, creer, 'Créer un cours', 'Créer', () => setShowForm(false))}
+        {editId && editForm && formulaireCours(editForm, ef, modifier, `Modifier le cours #${editId}`, 'Enregistrer', () => { setEditId(null); setEditForm(null) })}
 
         <Card title={titreCarte} action={<button onClick={() => charger()} className="p-1.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-500 hover:text-blue-700 cursor-pointer" title="Actualiser"><RefreshCw size={15} /></button>}>
           {loading ? <Spinner /> : <div className="space-y-3">
@@ -190,13 +244,16 @@ export default function CoursView({ role, currentUser }) {
                     <div className="font-medium text-gray-800">{c.titre}</div>
                     <div className="text-sm text-gray-500 mt-0.5 flex items-center gap-3 flex-wrap">
                       <span className="flex items-center gap-1"><Calendar size={13} className="text-blue-500" />{c.date}</span>
-                      <span className="flex items-center gap-1"><Clock size={13} className="text-blue-500" />{c.heureDebut}</span>
+                      <span className="flex items-center gap-1"><Clock size={13} className="text-blue-500" />{heure(c.heureDebut)}</span>
                       <span className="flex items-center gap-1"><Timer size={13} className="text-blue-500" />{c.duree} min</span>
                       <span className="flex items-center gap-1"><MapPin size={13} className="text-blue-500" />{c.lieu}</span>
                     </div>
                     <div className="text-xs text-gray-400 mt-0.5">Niveau {c.niveauCible} · Enseignant #{c.enseignantId}</div>
                   </div>
-                  {role === 'PRESIDENT' && <Btn variant="danger" onClick={() => supprimer(c.id)}>Supprimer</Btn>}
+                  <div className="flex gap-2">
+                    {peutModifierCours(c) && <Btn variant="outline" onClick={() => ouvrirEdition(c)}>Modifier</Btn>}
+                    {role === 'PRESIDENT' && <Btn variant="danger" onClick={() => supprimer(c.id)}>Supprimer</Btn>}
+                  </div>
                 </div>
             ))}
             {cours.length === 0 && <p className="text-gray-400 text-sm text-center py-4">Aucun cours trouvé.</p>}

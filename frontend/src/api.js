@@ -35,6 +35,8 @@ export const api = {
     listerParEnseignant: (enseignantId) => axios.get(`/api/competitions/enseignant/${enseignantId}`),
     consulter:       (id)            => axios.get(`/api/competitions/${id}`),
     creer:           (data, role, userId) => axios.post('/api/competitions', data, { headers: h(role, userId) }),
+    modifier: (id, data, role, userId) => axios.patch(`/api/competitions/${id}`, data, { headers: h(role, userId) }),
+    modifierResultat: (resultatId, data, role, userId) => axios.patch(`/api/competitions/resultats/${resultatId}`, data, { headers: h(role, userId) }),
     supprimer:       (id, role)      => axios.delete(`/api/competitions/${id}`, { headers: h(role) }),
     ajouterResultat: (competId, data, role, userId) =>
         axios.post(`/api/competitions/${competId}/resultats`, data, { headers: h(role, userId) }),

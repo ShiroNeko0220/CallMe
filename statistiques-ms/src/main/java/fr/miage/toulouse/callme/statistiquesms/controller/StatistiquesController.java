@@ -21,13 +21,16 @@ public class StatistiquesController {
 
     @GetMapping("/cours")
     @PreAuthorize("hasRole('PRESIDENT')")
-    public CoursStatistiqueResponse statistiquesCours() {
+    public CoursStatistiqueResponse statistiquesCours(
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte) {
         return service.statistiquesCours();
     }
 
     @GetMapping("/cours/{idCours}/eleves")
     @PreAuthorize("hasRole('PRESIDENT')")
-    public List<PresenceStatResponse> elevesPresentsCours(@PathVariable Long idCours) {
+    public List<PresenceStatResponse> elevesPresentsCours(
+            @PathVariable Long idCours,
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte) {
         return service.elevesPresentsCours(idCours);
     }
 
@@ -35,6 +38,7 @@ public class StatistiquesController {
     @PreAuthorize("hasRole('PRESIDENT')")
     public List<CoursPresenceEleveResponse> coursPourEleve(
             @PathVariable Long eleveId,
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte,
             @RequestParam(value = "debut", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate debut,
             @RequestParam(value = "fin", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
         return service.coursPourEleveAvecPresence(eleveId, debut, fin);
@@ -42,7 +46,9 @@ public class StatistiquesController {
 
     @GetMapping("/competitions/niveau/{niveau}/nombre")
     @PreAuthorize("hasRole('PRESIDENT')")
-    public Long nombreCompetitionsParNiveau(@PathVariable int niveau) {
+    public Long nombreCompetitionsParNiveau(
+            @PathVariable int niveau,
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte) {
         return service.nombreCompetitionsParNiveau(niveau);
     }
 
@@ -50,6 +56,7 @@ public class StatistiquesController {
     @PreAuthorize("hasRole('PRESIDENT')")
     public List<ResultatStatResponse> resultatsCompetitionEleve(
             @PathVariable Long eleveId,
+            @RequestHeader(value = "X-Role", required = false) String roleConnecte,
             @RequestParam(value = "debut", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate debut,
             @RequestParam(value = "fin", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
         return service.resultatsCompetitionEleve(eleveId, debut, fin);
