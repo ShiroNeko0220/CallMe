@@ -162,12 +162,11 @@ class CompetitionServiceTests {
         savedResultat.setCompetitionDate(baseCompetition.getDate());
 
         when(competitionRepo.findById("comp-1")).thenReturn(Optional.of(baseCompetition));
-        when(utilisateurClient.getRoleUtilisateur(1L)).thenReturn("ENSEIGNANT");
         when(utilisateurClient.getNiveauUtilisateur(5L)).thenReturn(3);
         when(resultatRepo.findByCompetitionIdAndEleveId("comp-1", 5L)).thenReturn(Optional.empty());
         when(resultatRepo.save(any())).thenReturn(savedResultat);
 
-        ResultatResponse result = service.ajouterResultat("comp-1", 1L, req);
+        ResultatResponse result = service.ajouterResultat("comp-1", "ENSEIGNANT", 1L, req);
 
         assertNotNull(result);
         assertEquals(new BigDecimal("7.5"), result.getNote());
@@ -183,7 +182,7 @@ class CompetitionServiceTests {
 
         when(competitionRepo.findById("comp-1")).thenReturn(Optional.of(baseCompetition));
 
-        assertThatThrownBy(() -> service.ajouterResultat("comp-1", 1L, req))
+        assertThatThrownBy(() -> service.ajouterResultat("comp-1", "PRESIDENT", 99L, req))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("La note doit être comprise entre 0 et 10");
     }
@@ -197,7 +196,7 @@ class CompetitionServiceTests {
 
         when(competitionRepo.findById("comp-1")).thenReturn(Optional.of(baseCompetition));
 
-        assertThatThrownBy(() -> service.ajouterResultat("comp-1", 1L, req))
+        assertThatThrownBy(() -> service.ajouterResultat("comp-1", "PRESIDENT", 99L, req))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("La note doit avoir une précision maximale au dixième");
     }
@@ -209,11 +208,12 @@ class CompetitionServiceTests {
         req.setNote(new BigDecimal("8.0"));
 
         when(competitionRepo.findById("comp-1")).thenReturn(Optional.of(baseCompetition));
-        when(utilisateurClient.getRoleUtilisateur(1L)).thenReturn("MEMBRE");
 
-        assertThatThrownBy(() -> service.ajouterResultat("comp-1", 1L, req))
+        assertThatThrownBy(() -> service.ajouterResultat("comp-1", "MEMBRE", 99L, req))
                 .isInstanceOf(ApiException.class)
-                .hasMessage("Seul un enseignant peut saisir un résultat");
+                .hasMessage("Seul le président ou l'enseignant responsable peut saisir un résultat pour cette compétition");
+
+        verify(resultatRepo, never()).save(any());
     }
 
     @Test
@@ -225,15 +225,13 @@ class CompetitionServiceTests {
 
         Resultat existant = new Resultat();
         when(competitionRepo.findById("comp-1")).thenReturn(Optional.of(baseCompetition));
-        when(utilisateurClient.getRoleUtilisateur(1L)).thenReturn("ENSEIGNANT");
         when(utilisateurClient.getNiveauUtilisateur(5L)).thenReturn(3);
         when(resultatRepo.findByCompetitionIdAndEleveId("comp-1", 5L)).thenReturn(Optional.of(existant));
 
-        assertThatThrownBy(() -> service.ajouterResultat("comp-1", 1L, req))
+        assertThatThrownBy(() -> service.ajouterResultat("comp-1", "ENSEIGNANT", 1L, req))
                 .isInstanceOf(ApiException.class)
                 .hasMessage("Résultat déjà saisi pour cet élève");
     }
-
 
     @Test
     void ajouterResultat_autreEnseignantInterdit() {
@@ -243,11 +241,10 @@ class CompetitionServiceTests {
 
         when(competitionRepo.findById("comp-1")).thenReturn(Optional.of(baseCompetition));
 
-        assertThatThrownBy(() -> service.ajouterResultat("comp-1", 2L, req))
+        assertThatThrownBy(() -> service.ajouterResultat("comp-1", "ENSEIGNANT", 2L, req))
                 .isInstanceOf(ApiException.class)
-                .hasMessage("Seul l'enseignant responsable de la compétition peut saisir un résultat");
+                .hasMessage("Seul le président ou l'enseignant responsable peut saisir un résultat pour cette compétition");
 
-        verify(utilisateurClient, never()).getRoleUtilisateur(any());
         verify(resultatRepo, never()).save(any());
     }
 

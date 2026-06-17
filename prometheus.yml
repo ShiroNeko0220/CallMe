@@ -14,6 +14,12 @@ scrape_configs:
     static_configs:
       - targets: ["callme-eureka:8761"]
 
+  - job_name: "callme-gateway"
+    scrape_interval: 5s
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["callme-gateway:8080"]
+
   - job_name: "callme-microservices"
     scrape_interval: 5s
     metrics_path: /actuator/prometheus

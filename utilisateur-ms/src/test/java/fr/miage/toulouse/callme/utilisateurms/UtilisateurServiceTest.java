@@ -137,6 +137,11 @@ public class UtilisateurServiceTest {
         assertThat(resultat.getNom()).isEqualTo("Test");
         assertThat(resultat.getPrenom()).isEqualTo("Test");
         assertThat(resultat.getEmail()).isEqualTo("test@test.com");
+        assertThat(resultat.getLogin()).isEqualTo("test_login");
+        assertThat(resultat.getVille()).isEqualTo("Toulouse");
+        assertThat(resultat.getPays()).isEqualTo("France");
+        assertThat(resultat.getRole()).isEqualTo(Role.MEMBRE);
+        assertThat(resultat.getNiveauExpertise()).isEqualTo(1);
 
         verify(repo).findById(1L);
     }
@@ -246,5 +251,99 @@ public class UtilisateurServiceTest {
 
         verify(repo).existsById(99L);
         verify(repo, never()).deleteById(any());
+    }
+
+    @Test
+    void login_identifiantsCorrects() {
+        when(repo.findByIdConnexionLogin("test_login")).thenReturn(Optional.of(u1));
+        when(passwordEncoder.matches("test_mdp", "test_mdp")).thenReturn(true);
+
+        UtilisateurResponse resultat = service.login("test_login", "test_mdp");
+
+        assertThat(resultat.getId()).isEqualTo(1L);
+        assertThat(resultat.getLogin()).isEqualTo("test_login");
+        assertThat(resultat.getRole()).isEqualTo(Role.MEMBRE);
+
+        verify(repo).findByIdConnexionLogin("test_login");
+    }
+
+    @Test
+    void login_loginInexistant() {
+        when(repo.findByIdConnexionLogin("inconnu")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.login("inconnu", "mdp"))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Identifiants incorrects");
+    }
+
+    @Test
+    void login_mauvaisMotDePasse() {
+        when(repo.findByIdConnexionLogin("test_login")).thenReturn(Optional.of(u1));
+        when(passwordEncoder.matches("mauvais", "test_mdp")).thenReturn(false);
+
+        assertThatThrownBy(() -> service.login("test_login", "mauvais"))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Identifiants incorrects");
+    }
+
+    @Test
+    void enseignantApte_roleEnseignantNiveauSuffisant() {
+        u1.setRole(Role.ENSEIGNANT);
+        u1.setNiveauExpertise(3);
+        when(repo.findById(1L)).thenReturn(Optional.of(u1));
+
+        assertThat(service.enseignantApte(1L, 3)).isTrue();
+        assertThat(service.enseignantApte(1L, 2)).isTrue();
+    }
+
+    @Test
+    void enseignantApte_niveauInsuffisant() {
+        u1.setRole(Role.ENSEIGNANT);
+        u1.setNiveauExpertise(1);
+        when(repo.findById(1L)).thenReturn(Optional.of(u1));
+
+        assertThat(service.enseignantApte(1L, 3)).isFalse();
+    }
+
+    @Test
+    void enseignantApte_mauvaisRole() {
+        u1.setRole(Role.MEMBRE);
+        u1.setNiveauExpertise(5);
+        when(repo.findById(1L)).thenReturn(Optional.of(u1));
+
+        assertThat(service.enseignantApte(1L, 1)).isFalse();
+    }
+
+    @Test
+    void getNiveauUtilisateur_retourneNiveau() {
+        when(repo.findById(1L)).thenReturn(Optional.of(u1));
+
+        assertThat(service.getNiveauUtilisateur(1L)).isEqualTo(1);
+    }
+
+    @Test
+    void getNiveauUtilisateur_utilisateurInexistant() {
+        when(repo.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getNiveauUtilisateur(99L))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Utilisateur non existant");
+    }
+
+    @Test
+    void getRoleUtilisateur_retourneRole() {
+        u1.setRole(Role.PRESIDENT);
+        when(repo.findById(1L)).thenReturn(Optional.of(u1));
+
+        assertThat(service.getRoleUtilisateur(1L)).isEqualTo(Role.PRESIDENT);
+    }
+
+    @Test
+    void getRoleUtilisateur_utilisateurInexistant() {
+        when(repo.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getRoleUtilisateur(99L))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Utilisateur non existant");
     }
 }

@@ -45,6 +45,12 @@ public class BadgeService {
         return toDTO(findById(id));
     }
 
+    public BadgeResponse getBadgeByPorteur(Long idPorteur) {
+        return badgeRepository.findByIdPorteur(idPorteur)
+                .map(this::toDTO)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Aucun badge associé à ce porteur"));
+    }
+
     public BadgeResponse associerBadge(Long idBadge, Long idPorteur) {
         Badge badge = findById(idBadge);
 
@@ -66,7 +72,7 @@ public class BadgeService {
 
         // Résoudre les alertes en attente pour cet enseignant/membre
         alerteRepository.findByResolueOrderByDateCreationDesc(false).stream()
-                .filter(a -> a.getIdEnseignant().equals(idPorteur))
+                .filter(a -> idPorteur.equals(a.getIdEnseignant()))
                 .forEach(a -> { a.setResolue(true); alerteRepository.save(a); });
 
         return response;

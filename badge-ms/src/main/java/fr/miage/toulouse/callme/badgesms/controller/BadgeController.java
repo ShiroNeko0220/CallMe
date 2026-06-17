@@ -40,6 +40,11 @@ public class BadgeController {
         return service.getBadgeById(id);
     }
 
+    @GetMapping("/porteur/{idPorteur}")
+    public BadgeResponse consulterParPorteur(@PathVariable Long idPorteur) {
+        return service.getBadgeByPorteur(idPorteur);
+    }
+
     @PatchMapping("/{idBadge}/associer/{idPorteur}")
     @PreAuthorize("hasAnyRole('SECRETAIRE', 'PRESIDENT')")
     public BadgeResponse associer(

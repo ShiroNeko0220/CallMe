@@ -200,12 +200,13 @@ class CoursServiceTest {
     void modifier_succes() {
         when(repo.findById(100L)).thenReturn(Optional.of(baseCours));
         when(repo.save(any(Cours.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(utilisateurClient.enseignantApte(1L, 3)).thenReturn(true);
 
         CoursRequest updateRequest = new CoursRequest();
         updateRequest.setTitre("Nouveau Titre");
         updateRequest.setDuree(90);
 
-        CoursResponse resultat = service.modifier(100L, updateRequest);
+        CoursResponse resultat = service.modifier(100L, updateRequest, "PRESIDENT", 99L);
 
         assertNotNull(resultat);
         assertEquals("Nouveau Titre", resultat.getTitre());
@@ -221,7 +222,9 @@ class CoursServiceTest {
         CoursRequest updateRequest = new CoursRequest();
         updateRequest.setDuree(20);
 
-        assertThatThrownBy(() -> service.modifier(100L, updateRequest));
+        assertThatThrownBy(() -> service.modifier(100L, updateRequest, "PRESIDENT", 99L))
+                .isInstanceOf(ApiException.class)
+                .hasMessage("Durée invalide (45min minimum)");
 
         verify(repo, never()).save(any(Cours.class));
     }
