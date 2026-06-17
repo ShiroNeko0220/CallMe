@@ -52,21 +52,21 @@ public class StatistiquesService {
     }
 
     public List<CoursPresenceEleveResponse> coursPourEleveAvecPresence(Long eleveId, LocalDate debut, LocalDate fin) {
-        if (debut == null) debut = LocalDate.now();
-        if (fin == null)   fin   = LocalDate.now();
+        final LocalDate debutEffectif = debut != null ? debut : LocalDate.now();
+        final LocalDate finEffective  = fin   != null ? fin   : LocalDate.now();
 
         StatEleve eleve = eleveRepo.findById(eleveId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Élève non existant"));
 
         List<StatCours> coursNiveau = coursRepo.findByNiveauCible(eleve.getNiveauExpertise());
 
-        List<StatPresence> presences = presencesPourPeriode(eleveId, debut, fin);
+        List<StatPresence> presences = presencesPourPeriode(eleveId, debutEffectif, finEffective);
 
         Set<Long> coursPresents = presences.stream().map(StatPresence::getIdCours).collect(Collectors.toSet());
 
         return coursNiveau.stream()
-                .filter(c -> debut == null || !c.getDate().isBefore(debut))
-                .filter(c -> fin == null || !c.getDate().isAfter(fin))
+                .filter(c -> !c.getDate().isBefore(debutEffectif))
+                .filter(c -> !c.getDate().isAfter(finEffective))
                 .map(c -> new CoursPresenceEleveResponse(c.getId(), c.getTitre(), c.getDate(), c.getHeureDebut(), c.getNiveauCible(), coursPresents.contains(c.getId())))
                 .toList();
     }
@@ -76,10 +76,10 @@ public class StatistiquesService {
     }
 
     public List<ResultatStatResponse> resultatsCompetitionEleve(Long eleveId, LocalDate debut, LocalDate fin) {
-        if (debut == null) debut = LocalDate.now();
-        if (fin == null)   fin   = LocalDate.now();
+        final LocalDate debutEffectif = debut != null ? debut : LocalDate.now();
+        final LocalDate finEffective  = fin   != null ? fin   : LocalDate.now();
 
-        List<StatResultat> resultats = resultatRepo.findByEleveIdAndCompetitionDateBetween(eleveId, debut, fin);
+        List<StatResultat> resultats = resultatRepo.findByEleveIdAndCompetitionDateBetween(eleveId, debutEffectif, finEffective);
 
         return resultats.stream()
                 .map(r -> new ResultatStatResponse(r.getId(), r.getCompetitionId(), r.getEleveId(), r.getEnseignantId(), r.getNote(), r.getCompetitionDate()))
