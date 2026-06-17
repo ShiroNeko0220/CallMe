@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Eye, EyeOff, X } from 'lucide-react'
+import { Eye, EyeOff, X, UserPlus, CheckCircle } from 'lucide-react'
 import { api } from '../api'
+import { Input, Btn, Alert } from '../components/Card'
 
 const initialSignup = {
   nom: '', prenom: '', email: '',
@@ -16,9 +17,10 @@ export default function LoginPage({ onLogin }) {
   const [showSignup, setShowSignup] = useState(false)
   const [signup, setSignup] = useState(initialSignup)
   const [signupError, setSignupError] = useState(null)
-  const [signupSuccess, setSignupSuccess] = useState(null)
   const [signupLoading, setSignupLoading] = useState(false)
   const [showSignupPwd, setShowSignupPwd] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [createdLogin, setCreatedLogin] = useState('')
 
   const submit = async (e) => {
     e.preventDefault()
@@ -41,16 +43,17 @@ export default function LoginPage({ onLogin }) {
   const creerCompte = async (e) => {
     e.preventDefault()
     setSignupError(null)
-    setSignupSuccess(null)
     setSignupLoading(true)
     try {
       await api.utilisateurs.creer(signup)
-      setSignupSuccess('Compte créé avec succès. Vous pouvez maintenant vous connecter.')
+      setCreatedLogin(signup.idConnexion.login)
       setForm({ login: signup.idConnexion.login, mdp: '' })
       setSignup(initialSignup)
+      setShowSignup(false)
+      setShowSuccessModal(true)
     } catch (err) {
       const msg = err.response?.data?.error
-      setSignupError(msg || 'Impossible de créer le compte. Vérifiez les champs, le login et l’email.')
+      setSignupError(msg || "Impossible de créer le compte. Vérifiez le login et l'email.")
     } finally {
       setSignupLoading(false)
     }
@@ -112,17 +115,20 @@ export default function LoginPage({ onLogin }) {
                   disabled={loading}
                   className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-medium py-2 rounded-lg text-sm transition-colors cursor-pointer"
               >
-                {loading ? 'Connexion…' : 'Se connecter'}
+                {loading ? 'Connexion...' : 'Se connecter'}
               </button>
             </form>
 
-            <button
-                type="button"
-                onClick={() => { setShowSignup(true); setSignupError(null); setSignupSuccess(null) }}
-                className="w-full mt-4 text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
-            >
-              Créer un nouveau compte membre
-            </button>
+            <div className="mt-4 flex justify-center">
+              <button
+                  type="button"
+                  onClick={() => { setShowSignup(true); setSignupError(null) }}
+                  className="inline-flex items-center gap-1.5 text-sm text-gray-500 border border-gray-300 hover:bg-gray-50 hover:text-gray-700 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+              >
+                <UserPlus size={14} />
+                Nouveau compte
+              </button>
+            </div>
           </div>
         </div>
 
@@ -139,10 +145,11 @@ export default function LoginPage({ onLogin }) {
 
                 <form onSubmit={creerCompte}>
                   <div className="grid grid-cols-2 gap-x-4">
-                    <Field label="Nom" required value={signup.nom} onChange={e => fSignup('nom', e.target.value)} />
-                    <Field label="Prénom" required value={signup.prenom} onChange={e => fSignup('prenom', e.target.value)} />
-                    <Field label="Email" required type="email" value={signup.email} onChange={e => fSignup('email', e.target.value)} />
-                    <Field label="Login" required value={signup.idConnexion.login} onChange={e => fSignupCnx('login', e.target.value)} />
+                    <Input label="Nom" required value={signup.nom} onChange={e => fSignup('nom', e.target.value)} placeholder="Dupont" />
+                    <Input label="Prénom" required value={signup.prenom} onChange={e => fSignup('prenom', e.target.value)} placeholder="Robert" />
+                    <Input label="Email" required type="email" value={signup.email} onChange={e => fSignup('email', e.target.value)} placeholder="exemple@exemple
+                    .fr" />
+                    <Input label="Login" required value={signup.idConnexion.login} onChange={e => fSignupCnx('login', e.target.value)} placeholder="robert" />
                     <div className="mb-3">
                       <label className="block text-sm text-gray-600 mb-1">Mot de passe <span className="text-red-500">*</span></label>
                       <div className="relative">
@@ -151,39 +158,51 @@ export default function LoginPage({ onLogin }) {
                             required
                             value={signup.idConnexion.mdp}
                             onChange={e => fSignupCnx('mdp', e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                            placeholder="••••••••"
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                         />
                         <button type="button" onClick={() => setShowSignupPwd(v => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer">
                           {showSignupPwd ? <Eye size={16} /> : <EyeOff size={16} />}
                         </button>
                       </div>
                     </div>
-                    <Field label="Ville" value={signup.adresse.ville} onChange={e => fSignupAdr('ville', e.target.value)} />
-                    <Field label="Pays" value={signup.adresse.pays} onChange={e => fSignupAdr('pays', e.target.value)} />
+                    <Input label="Ville" optional value={signup.adresse.ville} onChange={e => fSignupAdr('ville', e.target.value)} placeholder="Toulouse" />
+                    <Input label="Pays" optional value={signup.adresse.pays} onChange={e => fSignupAdr('pays', e.target.value)} placeholder="France" />
                   </div>
 
-                  {signupError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{signupError}</p>}
-                  {signupSuccess && <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-3">{signupSuccess}</p>}
+                  <Alert type="error" message={signupError} onClose={() => setSignupError(null)} />
 
                   <div className="flex justify-end gap-2 mt-2">
-                    <button type="button" onClick={() => setShowSignup(false)} className="px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg cursor-pointer">Fermer</button>
-                    <button type="submit" disabled={signupLoading} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-medium rounded-lg cursor-pointer">
-                      {signupLoading ? 'Création…' : 'Créer le compte'}
-                    </button>
+                    <Btn type="button" variant="outline" onClick={() => setShowSignup(false)}>Annuler</Btn>
+                    <Btn type="submit" disabled={signupLoading}>{signupLoading ? 'Création...' : 'Créer le compte'}</Btn>
                   </div>
                 </form>
               </div>
             </div>
         )}
-      </div>
-  )
-}
 
-function Field({ label, required, ...props }) {
-  return (
-      <div className="mb-3">
-        <label className="block text-sm text-gray-600 mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
-        <input {...props} required={required} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+        {showSuccessModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 w-full max-w-sm text-center">
+                <div className="flex justify-center mb-4">
+                  <CheckCircle size={48} className="text-green-500" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-800 mb-2">Compte créé !</h2>
+                <p className="text-sm text-gray-500 mb-1">
+                  Votre compte <span className="font-medium text-gray-700">"{createdLogin}"</span> a été créé avec succès.
+                </p>
+                <p className="text-sm text-gray-500 mb-6">
+                  Vous pouvez maintenant vous connecter avec vos identifiants.
+                </p>
+                <button
+                    onClick={() => setShowSuccessModal(false)}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg text-sm transition-colors cursor-pointer"
+                >
+                  Me connecter
+                </button>
+              </div>
+            </div>
+        )}
       </div>
   )
 }

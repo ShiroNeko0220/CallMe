@@ -1,170 +1,491 @@
-### CallMe
-### Point d'entrée : http://localhost:8080
+### CallMe / Oduru
+### Tests API
+### Deux modes : Gateway (tout passe par 8080) ou Direct (port du MS, sans les autres)
+###
+### MODE GATEWAY  → décommenter @baseUrl = http://localhost:8080
+### MODE DIRECT   → utiliser les variables @urlXxx ci-dessous (un MS à la fois)
+###
+### Note : les endpoints qui font des appels Feign inter-services (ex. vérification
+### enseignant apte) nécessitent quand même que le MS cible soit démarré.
+### Les endpoints purement locaux fonctionnent sans aucun autre MS.
 
-@baseUrl = http://localhost:8080
+@baseUrl      = http://localhost:8080
 
-###############################################
-### UTILISATEURS
-###############################################
+### URLs directes par microservice (mode standalone)
+@urlUtilisateur  = http://localhost:8081
+@urlCours        = http://localhost:8082
+@urlCompetition  = http://localhost:8083
+@urlBadge        = http://localhost:8084
+@urlPresence     = http://localhost:8085
+@urlStatistiques = http://localhost:8086
 
-### Créer un utilisateur (ENSEIGNANT)
-# @name createEnseignant
-POST {{baseUrl}}/api/utilisateurs
+
+###############################################################################
+### UTILISATEUR-MS : Port 8081
+### Base autonome : toutes les opérations ci-dessous fonctionnent SANS les autres MS
+### Feign vers aucun autre service
+###############################################################################
+
+### [AUTH] Login — aucun header requis
+# @name login
+POST {{urlUtilisateur}}/utilisateurs/login
+Content-Type: application/json
+
+{
+  "login": "secretaire",
+  "motDePasse": "password"
+}
+
+###
+
+### [AUTH] Login presidente
+POST {{urlUtilisateur}}/utilisateurs/login
+Content-Type: application/json
+
+{
+  "login": "presidente",
+  "motDePasse": "password"
+}
+
+###
+
+### [AUTH] Créer un compte (public, sans rôle)
+POST {{urlUtilisateur}}/utilisateurs
 Content-Type: application/json
 
 {
   "nom": "Test",
-  "prenom": "Katia",
-  "email": "katia@callme.fr",
-  "idConnexion": {
-    "login": "katia",
-    "mdp": "secret123"
-  },
-  "adresse": {
-    "ville": "Toulouse",
-    "pays": "France"
-  }
+  "prenom": "Jean",
+  "email": "jean@oduru.fr",
+  "login": "jean",
+  "motDePasse": "secret123",
+  "ville": "Lyon",
+  "pays": "France",
+  "niveauExpertise": 1,
+  "role": "MEMBRE"
 }
 
 ###
 
-### Créer un utilisateur (MEMBRE)
-POST {{baseUrl}}/api/utilisateurs
-Content-Type: application/json
-
-{
-  "nom": "Tony",
-  "prenom": "Stark",
-  "email": "tony@callme.fr",
-  "idConnexion": {
-    "login": "tony",
-    "mdp": "ImIronMan"
-  },
-  "adresse": {
-    "ville": "New York",
-    "pays": "USA"
-  }
-}
-
-###
-
-### Lister tous les utilisateurs
-GET {{baseUrl}}/api/utilisateurs
+### Lister tous les membres (SECRETAIRE requis)
+GET {{urlUtilisateur}}/utilisateurs
 X-Role: SECRETAIRE
 
 ###
 
-### Consulter un utilisateur par ID
-GET {{baseUrl}}/api/utilisateurs/1
-X-Role: MEMBRE
+### Consulter un membre par ID (public)
+GET {{urlUtilisateur}}/utilisateurs/1
 
 ###
 
-### Modifier son propre profil (MEMBRE / ENSEIGNANT / SECRETAIRE / PRESIDENT)
-### Ne permet pas de modifier le rôle ni le niveau d'expertise
-PATCH {{baseUrl}}/api/utilisateurs/1
+### Vérifier existence d'un membre (endpoint interne utilisé par Feign)
+GET {{urlUtilisateur}}/utilisateurs/1/exists
+
+###
+
+### Vérifier aptitude enseignant (endpoint interne utilisé par cours-ms / competition-ms)
+### id=3 (enseignant3 niveau 3) — apte pour niveau <= 3
+GET {{urlUtilisateur}}/utilisateurs/3/apte?niveau=3
+
+###
+
+### Vérifier aptitude enseignant — non apte
+GET {{urlUtilisateur}}/utilisateurs/3/apte?niveau=5
+
+###
+
+### Obtenir le niveau d'un utilisateur (utilisé par competition-ms)
+GET {{urlUtilisateur}}/utilisateurs/5/niveau
+
+###
+
+### Obtenir le rôle d'un utilisateur (utilisé par competition-ms)
+GET {{urlUtilisateur}}/utilisateurs/3/role
+
+###
+
+### Modifier son propre profil (MEMBRE / ENSEIGNANT)
+PATCH {{urlUtilisateur}}/utilisateurs/5
 X-Role: MEMBRE
-X-Utilisateur-Id: 1
+X-Utilisateur-Id: 5
 Content-Type: application/json
 
 {
-  "nom": "Test",
-  "prenom": "Thu",
-  "email": "Thu@callme.fr",
-  "ville": "Space",
+  "nom": "Petit",
+  "prenom": "Emma",
+  "email": "emma.new@oduru.fr",
+  "ville": "Bordeaux",
   "pays": "France"
 }
 
 ###
 
-### Modifier un utilisateur en admin (SECRETAIRE / PRESIDENT)
-### Permet aussi de modifier le rôle et le niveau d'expertise
-PATCH {{baseUrl}}/api/utilisateurs/1/admin
+### Modifier un utilisateur en mode admin — permet de changer rôle et niveau (SECRETAIRE / PRESIDENT)
+PATCH {{urlUtilisateur}}/utilisateurs/5/admin
 X-Role: SECRETAIRE
-X-Utilisateur-Id: 3
+X-Utilisateur-Id: 2
 Content-Type: application/json
 
 {
-  "nom": "Test",
-  "prenom": "Thu",
-  "email": "Thu@callme.fr",
-  "ville": "Space",
+  "nom": "Petit",
+  "prenom": "Emma",
+  "email": "emma@oduru.fr",
+  "ville": "Toulouse",
   "pays": "France",
-  "niveauExpertise": 3,
-  "role": "ENSEIGNANT"
+  "niveauExpertise": 2,
+  "role": "MEMBRE"
 }
 
 ###
 
-### Supprimer un utilisateur
-DELETE {{baseUrl}}/api/utilisateurs/1
+### Supprimer un utilisateur (PRESIDENT uniquement)
+DELETE {{urlUtilisateur}}/utilisateurs/11
 X-Role: PRESIDENT
 
-###############################################
-### COURS
-###############################################
+###
 
-### Créer un cours (enseignantId doit exister et avoir niveauExpertise >= niveauCible)
-POST {{baseUrl}}/api/cours
-X-Role: ENSEIGNANT
+### [ERREUR ATTENDUE 403] Lister sans rôle
+GET {{urlUtilisateur}}/utilisateurs
+
+###
+
+### [ERREUR ATTENDUE 403] Mauvais rôle
+DELETE {{urlUtilisateur}}/utilisateurs/1
+X-Role: MEMBRE
+
+
+###############################################################################
+### COURS-MS — Port 8082
+### Standalone partiel : lister/consulter fonctionne seul
+### Créer nécessite utilisateur-ms (vérification aptitude enseignant via Feign)
+###############################################################################
+
+### Lister tous les cours (public, sans aucun autre MS)
+GET {{urlCours}}/cours
+
+###
+
+### Cours par niveau (public)
+GET {{urlCours}}/cours/niveau/3
+
+###
+
+### Cours par enseignant (public)
+GET {{urlCours}}/cours/enseignant/3
+
+###
+
+### Consulter un cours par ID (public)
+GET {{urlCours}}/cours/1
+
+###
+
+### Créer un cours — nécessite utilisateur-ms pour vérification aptitude
+### enseignantId=3 (enseignant3, niveau 3) apte pour niveauCible=1
+POST {{urlCours}}/cours
+X-Role: SECRETAIRE
+X-Utilisateur-Id: 2
 Content-Type: application/json
 
 {
-  "titre": "Initiation au tennis de table",
-  "date": "2026-07-20",
+  "titre": "Initiation danse niveau 1",
+  "date": "2026-12-15",
   "heureDebut": "10:00",
-  "duree": 90,
-  "lieu": "HELL Salle 2",
-  "niveauCible": 3,
-  "enseignantId": 1
+  "dureeMinutes": 60,
+  "lieu": "Salle A",
+  "niveauCible": 1,
+  "enseignantId": 3
 }
 
 ###
 
-### Lister tous les cours
-GET {{baseUrl}}/api/cours
-
-###
-
-### Cours par enseignant
-GET {{baseUrl}}/api/cours/enseignant/1
-
-###
-
-### Cours par niveau
-GET {{baseUrl}}/api/cours/niveau/3
-
-###############################################
-### BADGES NFC
-###############################################
-
-### Créer un badge pour un porteur
-POST {{baseUrl}}/api/badges
+### [ERREUR ATTENDUE 403] Enseignant non apte (niveau 3 pour niveau 5)
+POST {{urlCours}}/cours
 X-Role: SECRETAIRE
+X-Utilisateur-Id: 2
 Content-Type: application/json
 
 {
-  "idPorteur": 2
+  "titre": "Masterclass niveau 5",
+  "date": "2026-12-20",
+  "heureDebut": "18:00",
+  "dureeMinutes": 90,
+  "lieu": "Grande Salle",
+  "niveauCible": 5,
+  "enseignantId": 3
 }
 
 ###
 
-### Associer un badge à un porteur (badgeId=1, porteurId=2)
-PUT {{baseUrl}}/api/badges/1/associer/2
+### [ERREUR ATTENDUE 400] Date trop proche (moins de 7 jours)
+POST {{urlCours}}/cours
+X-Role: SECRETAIRE
+X-Utilisateur-Id: 2
+Content-Type: application/json
+
+{
+  "titre": "Cours demain",
+  "date": "2026-06-18",
+  "heureDebut": "10:00",
+  "dureeMinutes": 60,
+  "lieu": "Salle A",
+  "niveauCible": 1,
+  "enseignantId": 3
+}
+
+###
+
+### Modifier un cours (SECRETAIRE / PRESIDENT)
+PATCH {{urlCours}}/cours/1
+X-Role: SECRETAIRE
+X-Utilisateur-Id: 2
+Content-Type: application/json
+
+{
+  "lieu": "Salle B modifiée"
+}
+
+###
+
+### Supprimer un cours (PRESIDENT uniquement)
+DELETE {{urlCours}}/cours/6
+X-Role: PRESIDENT
+
+###
+
+### [ERREUR ATTENDUE 403] Mauvais rôle pour créer
+POST {{urlCours}}/cours
+X-Role: MEMBRE
+Content-Type: application/json
+
+{
+  "titre": "Tentative MEMBRE",
+  "date": "2026-12-15",
+  "heureDebut": "10:00",
+  "dureeMinutes": 60,
+  "lieu": "Salle A",
+  "niveauCible": 1,
+  "enseignantId": 3
+}
+
+
+###############################################################################
+### COMPETITION-MS — Port 8083 (base : MongoDB)
+### Standalone partiel : lister/consulter fonctionne seul
+### Créer / ajouter résultat nécessite utilisateur-ms via Feign
+###############################################################################
+
+### Lister toutes les compétitions (public)
+GET {{urlCompetition}}/competitions
+
+###
+
+### Compétitions par niveau (public)
+GET {{urlCompetition}}/competitions/niveau/3
+
+###
+
+### Compétitions d'un enseignant (public)
+GET {{urlCompetition}}/competitions/enseignant/3
+
+###
+
+### Compétitions accessibles à un élève selon son niveau
+GET {{urlCompetition}}/competitions/eleve/7
+
+###
+
+### Consulter une compétition par ID MongoDB (remplacer l'ID)
+GET {{urlCompetition}}/competitions/REMPLACER_PAR_ID_MONGO
+
+###
+
+### Résultats d'une compétition (public)
+GET {{urlCompetition}}/competitions/REMPLACER_PAR_ID_MONGO/resultats
+
+###
+
+### Résultats d'un élève (public)
+GET {{urlCompetition}}/competitions/eleve/7/resultats
+
+###
+
+### Nombre de compétitions par niveau (utilisé par statistiques-ms)
+GET {{urlCompetition}}/competitions/niveau/3/count
+
+###
+
+### Créer une compétition — nécessite utilisateur-ms (aptitude enseignant)
+### enseignantId=4 (enseignant5, niveau 5) apte pour niveauCible=3
+POST {{urlCompetition}}/competitions
+X-Role: ENSEIGNANT
+X-Utilisateur-Id: 4
+Content-Type: application/json
+
+{
+  "titre": "Tournoi été 2026",
+  "niveauCible": 3,
+  "date": "2026-12-20",
+  "heureDebut": "09:00",
+  "duree": 180,
+  "lieu": "Gymnase Central",
+  "enseignantId": 4
+}
+
+###
+
+### Ajouter un résultat — nécessite utilisateur-ms (vérif niveau élève)
+### eleveId=7 (membre3, niveau 3) pour une compétition niveau 3
+POST {{urlCompetition}}/competitions/REMPLACER_PAR_ID_MONGO/resultats
+X-Role: ENSEIGNANT
+X-Utilisateur-Id: 4
+Content-Type: application/json
+
+{
+  "eleveId": 7,
+  "note": 8.5
+}
+
+###
+
+### [ERREUR ATTENDUE 400] Note hors plage (> 10)
+POST {{urlCompetition}}/competitions/REMPLACER_PAR_ID_MONGO/resultats
+X-Role: ENSEIGNANT
+X-Utilisateur-Id: 4
+Content-Type: application/json
+
+{
+  "eleveId": 7,
+  "note": 11.0
+}
+
+###
+
+### Supprimer une compétition (PRESIDENT uniquement)
+DELETE {{urlCompetition}}/competitions/REMPLACER_PAR_ID_MONGO
+X-Role: PRESIDENT
+
+
+###############################################################################
+### BADGE-MS — Port 8084
+### Standalone partiel : lister/consulter/créer/alertes fonctionnent seuls
+### Associer nécessite utilisateur-ms (vérification existence porteur via Feign)
+###############################################################################
+
+### Lister tous les badges (public)
+GET {{urlBadge}}/badges
+
+###
+
+### Consulter un badge par ID (public)
+GET {{urlBadge}}/badges/1
+
+###
+
+### Créer un badge DISPONIBLE (SECRETAIRE / PRESIDENT)
+POST {{urlBadge}}/badges
+X-Role: SECRETAIRE
+Content-Type: application/json
+
+{}
+
+###
+
+### Lister les alertes badges non résolues (SECRETAIRE uniquement)
+### Alertes créées automatiquement quand un enseignant sans badge crée un cours/compétition
+GET {{urlBadge}}/badges/alertes
 X-Role: SECRETAIRE
 
 ###
 
-### Dissocier un badge (badgeId=1)
-PUT {{baseUrl}}/api/badges/1/dissocier
+### Associer badge #6 (DISPONIBLE) au porteur id=1 (presidente)
+### Nécessite utilisateur-ms pour vérifier que l'utilisateur existe
+PATCH {{urlBadge}}/badges/6/associer/1
 X-Role: SECRETAIRE
 
-###############################################
-### PRÉSENCES
-###############################################
+###
 
-### Enregistrer une présence (badgeage NFC)
-POST {{baseUrl}}/api/presences
+### [ERREUR ATTENDUE 409] Badge déjà associé
+PATCH {{urlBadge}}/badges/1/associer/9
+X-Role: SECRETAIRE
+
+###
+
+### [ERREUR ATTENDUE 409] Porteur possède déjà un badge
+PATCH {{urlBadge}}/badges/6/associer/5
+X-Role: SECRETAIRE
+
+###
+
+### Dissocier un badge (SECRETAIRE uniquement)
+PATCH {{urlBadge}}/badges/6/dissocier
+X-Role: SECRETAIRE
+
+###
+
+### [ERREUR ATTENDUE 403] PRESIDENT ne peut pas dissocier
+PATCH {{urlBadge}}/badges/1/dissocier
+X-Role: PRESIDENT
+
+###
+
+### Supprimer un badge DISPONIBLE (PRESIDENT uniquement)
+DELETE {{urlBadge}}/badges/8
+X-Role: PRESIDENT
+
+###
+
+### [ERREUR ATTENDUE 403] SECRETAIRE ne peut pas supprimer
+DELETE {{urlBadge}}/badges/8
+X-Role: SECRETAIRE
+
+
+###############################################################################
+### PRESENCE-MS — Port 8085
+### Standalone partiel : lister fonctionné seul
+### Badger nécessite badge-ms (vérification statut badge via Feign)
+### et cours-ms (vérification existence cours via Feign selon impl.)
+###############################################################################
+
+### Lister toutes les présences (public)
+GET {{urlPresence}}/presences
+
+###
+
+### Présences par cours (public)
+GET {{urlPresence}}/presences/cours/1
+
+###
+
+### Nombre de présences à un cours
+GET {{urlPresence}}/presences/cours/1/count
+
+###
+
+### Présences par élève (public)
+GET {{urlPresence}}/presences/eleve/5
+
+###
+
+### Nombre de présences par cours (résumé global)
+GET {{urlPresence}}/presences/cours/counts
+
+###
+
+### Enregistrer une présence (badgeage NFC) — nécessite badge-ms
+### idBadge=1 (associé à membre 5, niveau 1), idCours=1 (niveau 1)
+POST {{urlPresence}}/presences/badger
+Content-Type: application/json
+
+{
+  "idBadge": 2,
+  "idCours": 2
+}
+
+###
+
+### [ERREUR ATTENDUE 409] Doublon — même badge, même cours
+POST {{urlPresence}}/presences/badger
 Content-Type: application/json
 
 {
@@ -174,90 +495,250 @@ Content-Type: application/json
 
 ###
 
-### Présences par cours
-GET {{baseUrl}}/api/presences/cours/1
-X-Role: ENSEIGNANT
-
-###
-
-### Présences par élève
-GET {{baseUrl}}/api/presences/eleve/2
-X-Role: MEMBRE
-
-###############################################
-### COMPÉTITIONS
-###############################################
-
-### Créer une compétition
-POST {{baseUrl}}/api/competitions
-X-Role: ENSEIGNANT
+### [ERREUR ATTENDUE 404] Badge inexistant
+POST {{urlPresence}}/presences/badger
 Content-Type: application/json
 
 {
-  "titre": "Tournoi été 2026",
-  "niveauCible": 3,
-  "date": "2026-08-15",
-  "heureDebut": "09:00",
-  "duree": 180,
-  "lieu": "Gymnase HEAVEN",
-  "enseignantId": 1
+  "idBadge": 999,
+  "idCours": 1
+}
+
+
+###############################################################################
+### STATISTIQUES-MS — Port 8086
+### Dépend de cours-ms, presence-ms et competition-ms via Feign
+### Tester standalone nécessite les 3 autres MS démarrés
+###############################################################################
+
+### Statistiques globales des cours (PRESIDENT uniquement)
+GET {{urlStatistiques}}/statistiques/cours
+X-Role: PRESIDENT
+
+###
+
+### Élèves présents à un cours spécifique (PRESIDENT uniquement)
+GET {{urlStatistiques}}/statistiques/cours/1/eleves
+X-Role: PRESIDENT
+
+###
+
+### Parcours d'un élève — cours (PRESIDENT uniquement)
+GET {{urlStatistiques}}/statistiques/eleves/5/cours
+X-Role: PRESIDENT
+
+###
+
+### Parcours d'un élève — cours avec filtre période
+GET {{urlStatistiques}}/statistiques/eleves/5/cours?debut=2026-01-01&fin=2026-12-31
+X-Role: PRESIDENT
+
+###
+
+### Parcours d'un élève — compétitions (PRESIDENT uniquement)
+GET {{urlStatistiques}}/statistiques/eleves/9/competitions
+X-Role: PRESIDENT
+
+###
+
+### Nombre de compétitions par niveau (PRESIDENT uniquement)
+GET {{urlStatistiques}}/statistiques/competitions/niveau/3/nombre
+X-Role: PRESIDENT
+
+###
+
+### [ERREUR ATTENDUE 403] Accès avec mauvais rôle
+GET {{urlStatistiques}}/statistiques/cours
+X-Role: MEMBRE
+
+
+###############################################################################
+### INFRASTRUCTURE — Accès directs (hors Spring Boot)
+###############################################################################
+
+### Eureka — liste des services enregistrés (JSON)
+GET http://localhost:8761/eureka/apps
+Accept: application/json
+
+###
+
+### Config Server — configuration active de badge-ms
+GET http://localhost:8888/badge-ms/default
+
+###
+
+### Config Server — configuration active de cours-ms
+GET http://localhost:8888/cours-ms/default
+
+###
+
+### Actuator — health utilisateur-ms
+GET {{urlUtilisateur}}/actuator/health
+
+###
+
+### Actuator — health badge-ms
+GET {{urlBadge}}/actuator/health
+
+###
+
+### Actuator — métriques Prometheus de cours-ms
+GET {{urlCours}}/actuator/prometheus
+
+###
+
+### Prometheus — vérifier les cibles (scraping)
+GET http://localhost:9090/api/v1/targets
+
+
+###############################################################################
+### GATEWAY — Mode production (tout passe par le port 8080)
+### Utiliser @baseUrl = http://localhost:8080 en tête de fichier
+###############################################################################
+
+### Santé de la gateway
+GET {{baseUrl}}/actuator/health
+
+###
+
+### Login via gateway
+POST {{baseUrl}}/api/utilisateurs/login
+Content-Type: application/json
+
+{
+  "login": "secretaire",
+  "motDePasse": "password"
 }
 
 ###
 
-### Ajouter un résultat à une compétition (competitionId=<mongo-id>)
-POST {{baseUrl}}/api/competitions/REMPLACER_PAR_ID_MONGO/resultats
-X-Role: ENSEIGNANT
-Content-Type: application/json
-
-{
-  "eleveId": 2,
-  "enseignantId": 1,
-  "note": 8.5
-}
-
-###############################################
-### STATISTIQUES
-###############################################
-
-### Statistiques d'un élève
-GET {{baseUrl}}/api/statistiques/eleve/2
-X-Role: MEMBRE
+### Lister cours via gateway
+GET {{baseUrl}}/api/cours
 
 ###
 
-### Statistiques d'un cours
-GET {{baseUrl}}/api/statistiques/cours/1
-X-Role: ENSEIGNANT
+### Lister badges via gateway
+GET {{baseUrl}}/api/badges
 
-###############################################
-### SWAGGER UI (accès direct par service)
-###############################################
+###
+
+### Alertes badges via gateway (SECRETAIRE)
+GET {{baseUrl}}/api/badges/alertes
+X-Role: SECRETAIRE
+
+###
+
+### Lister compétitions via gateway
+GET {{baseUrl}}/api/competitions
+
+###
+
+### Statistiques cours via gateway
+GET {{baseUrl}}/api/statistiques/cours
+X-Role: PRESIDENT
+
+
+###############################################################################
+### SWAGGER UI — Accès direct par service
+###############################################################################
 
 ### Swagger utilisateur-ms
-GET http://localhost:8081/swagger-ui/index.html
+GET {{urlUtilisateur}}/swagger-ui/index.html
 
 ###
 
 ### Swagger cours-ms
-GET http://localhost:8082/swagger-ui/index.html
+GET {{urlCours}}/swagger-ui/index.html
 
 ###
 
 ### Swagger competition-ms
-GET http://localhost:8083/swagger-ui/index.html
+GET {{urlCompetition}}/swagger-ui/index.html
 
 ###
 
 ### Swagger badge-ms
-GET http://localhost:8084/swagger-ui/index.html
+GET {{urlBadge}}/swagger-ui/index.html
 
 ###
 
 ### Swagger presence-ms
-GET http://localhost:8085/swagger-ui/index.html
+GET {{urlPresence}}/swagger-ui/index.html
 
 ###
 
 ### Swagger statistiques-ms
-GET http://localhost:8086/swagger-ui/index.html
+GET {{urlStatistiques}}/swagger-ui/index.html
+
+
+###############################################################################
+### TESTS DÉCOUPLAGE — Valider le cache local et l'autonomie des MS
+###############################################################################
+
+### [T-15] Créer un cours avec utilisateur-ms ARRÊTÉ (cache chaud)
+### Attendu : 201 Created (cours-ms utilise son cache local EnseignantCache)
+### Prérequis : avoir démarré l'appli normalement une fois (cache alimenté au boot)
+POST {{urlCours}}/cours
+X-Role: SECRETAIRE
+X-Utilisateur-Id: 2
+Content-Type: application/json
+
+{
+  "titre": "Test cache — sans utilisateur-ms",
+  "date": "2026-12-28",
+  "heureDebut": "10:00",
+  "dureeMinutes": 60,
+  "lieu": "Salle Test",
+  "niveauCible": 3,
+  "enseignantId": 3
+}
+
+###
+
+### [T-20] Consulter statistiques avec cours-ms et competition-ms ARRÊTÉS
+### Attendu : 200 OK (statistiques-ms lit uniquement sa base statistique_db locale)
+GET {{urlStatistiques}}/statistiques/cours
+X-Role: PRESIDENT
+
+###
+
+### [T-19] Modifier niveau d'enseignant3 (déclenche event → mise à jour cache)
+PATCH {{urlUtilisateur}}/utilisateurs/3/admin
+X-Role: SECRETAIRE
+X-Utilisateur-Id: 2
+Content-Type: application/json
+
+{
+  "niveauExpertise": 5
+}
+
+###
+
+### [T-19b] Vérifier que le cache est mis à jour : créer cours niveau 5 avec enseignant3
+### Attendu : 201 Created (cache reflète le nouveau niveau 5)
+POST {{urlCours}}/cours
+X-Role: SECRETAIRE
+X-Utilisateur-Id: 2
+Content-Type: application/json
+
+{
+  "titre": "Cours niveau 5 après mise à jour niveau",
+  "date": "2026-12-29",
+  "heureDebut": "18:00",
+  "dureeMinutes": 90,
+  "lieu": "Grande Salle",
+  "niveauCible": 5,
+  "enseignantId": 3
+}
+
+###
+
+### [T-19c] Remettre enseignant3 à niveau 3
+PATCH {{urlUtilisateur}}/utilisateurs/3/admin
+X-Role: SECRETAIRE
+X-Utilisateur-Id: 2
+Content-Type: application/json
+
+{
+  "niveauExpertise": 3
+}

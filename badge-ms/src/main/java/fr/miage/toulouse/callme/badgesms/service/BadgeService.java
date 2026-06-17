@@ -1,10 +1,13 @@
 package fr.miage.toulouse.callme.badgesms.service;
 
+import fr.miage.toulouse.callme.badgesms.DTO.AlerteBadgeResponse;
 import fr.miage.toulouse.callme.badgesms.DTO.BadgeRequest;
 import fr.miage.toulouse.callme.badgesms.DTO.BadgeResponse;
 import fr.miage.toulouse.callme.badgesms.clients.UtilisateurClient;
+import fr.miage.toulouse.callme.badgesms.entity.AlerteBadge;
 import fr.miage.toulouse.callme.badgesms.entity.Badge;
 import fr.miage.toulouse.callme.badgesms.entity.Statut;
+import fr.miage.toulouse.callme.badgesms.repository.AlerteBadgeRepository;
 import fr.miage.toulouse.callme.badgesms.repository.BadgeRepository;
 import fr.miage.toulouse.callme.libcommun.ApiException;
 import org.springframework.http.HttpStatus;
@@ -17,10 +20,13 @@ import java.util.List;
 public class BadgeService {
 
     private final BadgeRepository badgeRepository;
+    private final AlerteBadgeRepository alerteRepository;
     private final UtilisateurClient utilisateurClient;
 
-    public BadgeService(BadgeRepository badgeRepository, UtilisateurClient utilisateurClient) {
+    public BadgeService(BadgeRepository badgeRepository, AlerteBadgeRepository alerteRepository,
+                        UtilisateurClient utilisateurClient) {
         this.badgeRepository = badgeRepository;
+        this.alerteRepository = alerteRepository;
         this.utilisateurClient = utilisateurClient;
     }
 
@@ -40,8 +46,6 @@ public class BadgeService {
     }
 
     public BadgeResponse associerBadge(Long idBadge, Long idPorteur) {
-        verifierPorteurExiste(idPorteur);
-
         Badge badge = findById(idBadge);
 
         if (badge.getStatut() == Statut.ASSOCIE) {
@@ -52,11 +56,38 @@ public class BadgeService {
             throw new ApiException(HttpStatus.CONFLICT, "Ce porteur possède déjà un badge.");
         });
 
+        verifierPorteurExiste(idPorteur);
+
         badge.setIdPorteur(idPorteur);
         badge.setStatut(Statut.ASSOCIE);
         badge.setDateAssociation(LocalDateTime.now());
 
-        return toDTO(badgeRepository.save(badge));
+        BadgeResponse response = toDTO(badgeRepository.save(badge));
+
+        // Résoudre les alertes en attente pour cet enseignant/membre
+        alerteRepository.findByResolueOrderByDateCreationDesc(false).stream()
+                .filter(a -> a.getIdEnseignant().equals(idPorteur))
+                .forEach(a -> { a.setResolue(true); alerteRepository.save(a); });
+
+        return response;
+    }
+
+    public List<AlerteBadgeResponse> listerAlertes() {
+        return alerteRepository.findByResolueOrderByDateCreationDesc(false)
+                .stream().map(this::toAlerteDTO).toList();
+    }
+
+    private AlerteBadgeResponse toAlerteDTO(AlerteBadge a) {
+        return AlerteBadgeResponse.builder()
+                .id(a.getId())
+                .typeActivite(a.getTypeActivite())
+                .idActivite(a.getIdActivite())
+                .titreActivite(a.getTitreActivite())
+                .dateActivite(a.getDateActivite())
+                .idEnseignant(a.getIdEnseignant())
+                .dateCreation(a.getDateCreation())
+                .resolue(a.isResolue())
+                .build();
     }
 
     public BadgeResponse dissocierBadge(Long idBadge) {
@@ -98,7 +129,8 @@ public class BadgeService {
         try {
             existe = utilisateurClient.existsById(idPorteur);
         } catch (Exception e) {
-            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "Impossible de vérifier le membre. Veuillez réessayer dans quelques instants.");
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "Impossible de vérifier le" +
+                    " membre. Veuillez réessayer dans quelques instants.");
         }
         if (!existe) {
             throw new ApiException(HttpStatus.NOT_FOUND, "Aucun utilisateur trouvé avec l'id " + idPorteur);

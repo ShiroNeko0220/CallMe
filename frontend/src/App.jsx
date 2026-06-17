@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Users, BookOpen, Trophy, CreditCard, CheckSquare, BarChart2, LogOut, UserCircle } from 'lucide-react'
 import LoginPage        from './views/LoginPage'
 import MembresView      from './views/MembresView'
+import MesElevesView    from './views/MesElevesView'
 import MesInfosView     from './views/MesInfosView'
 import CoursView        from './views/CoursView'
 import CompetitionsView from './views/CompetitionsView'
@@ -10,13 +11,14 @@ import PresencesView    from './views/PresencesView'
 import StatistiquesView from './views/StatistiquesView'
 
 const NAV = [
-  { key: 'membres',      label: 'Membres',       Icon: Users,       roles: ['MEMBRE', 'ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT'] },
-  { key: 'cours',        label: 'Cours',         Icon: BookOpen,    roles: ['MEMBRE', 'ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT'] },
-  { key: 'competitions', label: 'Compétitions',  Icon: Trophy,      roles: ['MEMBRE', 'ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT'] },
-  { key: 'badges',       label: 'Badges',        Icon: CreditCard,  roles: ['SECRETAIRE', 'PRESIDENT'] },
-  { key: 'presences',    label: 'Présences',     Icon: CheckSquare, roles: ['MEMBRE', 'ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT'] },
-  { key: 'statistiques', label: 'Statistiques',  Icon: BarChart2,   roles: ['PRESIDENT'] },
-  { key: 'profil',       label: 'Mon profil',    Icon: UserCircle,  roles: ['MEMBRE', 'ENSEIGNANT'] },
+  { key: 'mes-eleves',   label: 'Mes élèves',    Icon: Users,       roles: ['ENSEIGNANT'] },
+  { key: 'membres',      label: 'Membres',        Icon: Users,       roles: ['SECRETAIRE', 'PRESIDENT'] },
+  { key: 'cours',        label: 'Cours',          Icon: BookOpen,    roles: ['MEMBRE', 'ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT'] },
+  { key: 'competitions', label: 'Compétitions',   Icon: Trophy,      roles: ['MEMBRE', 'ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT'] },
+  { key: 'badges',       label: 'Badges',         Icon: CreditCard,  roles: ['SECRETAIRE', 'PRESIDENT'] },
+  { key: 'presences',    label: 'Présences',      Icon: CheckSquare, roles: ['MEMBRE', 'ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT'] },
+  { key: 'statistiques', label: 'Statistiques',   Icon: BarChart2,   roles: ['PRESIDENT'] },
+  { key: 'profil',       label: 'Mon profil',     Icon: UserCircle,  roles: ['MEMBRE', 'ENSEIGNANT'] },
 ]
 
 export default function App() {
@@ -93,6 +95,7 @@ export default function App() {
           </nav>
 
           <main className="flex-1 p-6 min-w-0">
+            {activeSection === 'mes-eleves'   && <MesElevesView    role={role} currentUser={user} />}
             {activeSection === 'membres'      && <MembresView      role={role} currentUser={user} onUserUpdated={updateUser} />}
             {activeSection === 'cours'        && <CoursView        role={role} currentUser={user} />}
             {activeSection === 'competitions' && <CompetitionsView role={role} currentUser={user} />}

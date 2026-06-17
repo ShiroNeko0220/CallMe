@@ -139,9 +139,9 @@ export default function MembresView({ role, currentUser, onUserUpdated }) {
               <p className="text-xs text-gray-400 mb-3"><span className="text-red-500">*</span> Champ obligatoire</p>
               <div className="grid grid-cols-2 gap-x-4">
                 <Input label="Nom" required value={form.nom} onChange={e => f('nom', e.target.value)} placeholder="Dupont" />
-                <Input label="Prénom" required value={form.prenom} onChange={e => f('prenom', e.target.value)} placeholder="Alice" />
-                <Input label="Email" required value={form.email} onChange={e => f('email', e.target.value)} placeholder="alice@club.fr" type="email" />
-                <Input label="Login" required value={form.idConnexion.login} onChange={e => fCnx('login', e.target.value)} placeholder="alice" />
+                <Input label="Prénom" required value={form.prenom} onChange={e => f('prenom', e.target.value)} placeholder="Robert" />
+                <Input label="Email" required value={form.email} onChange={e => f('email', e.target.value)} placeholder="example@exemple.fr" type="email" />
+                <Input label="Login" required value={form.idConnexion.login} onChange={e => fCnx('login', e.target.value)} placeholder="Robert" />
                 <div className="mb-3">
                   <label className="block text-sm text-gray-600 mb-1">Mot de passe <span className="text-red-500">*</span></label>
                   <div className="relative">

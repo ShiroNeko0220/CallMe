@@ -328,6 +328,40 @@ export default function CompetitionsView({ role, currentUser }) {
 
         {showForm && formulaireCompetition(form, f, creer, 'Créer une compétition', 'Créer', () => setShowForm(false))}
         {editCompetitionId && editForm && formulaireCompetition(editForm, ef, modifierCompetition, `Modifier la compétition`, 'Enregistrer', () => { setEditCompetitionId(null); setEditForm(null) })}
+        {showForm && (
+            <Card title="Créer une compétition">
+              <div className="grid grid-cols-2 gap-x-4">
+                <Input label="Titre" value={form.titre} onChange={e => f('titre', e.target.value)} placeholder="ex. Championnat régional" />
+                <Input label="Date (au moins 7 jours à l'avance)" value={form.date} onChange={e => f('date', e.target.value)} type="date" min={dateMin7()} />
+                <Input label="Heure de début" value={form.heureDebut} onChange={e => f('heureDebut', e.target.value)} type="time" />
+                <Input label="Durée en minutes" value={form.duree} onChange={e => f('duree', Number(e.target.value))} type="number" min="45" />
+                <Input label="Lieu" value={form.lieu} onChange={e => f('lieu', e.target.value)} placeholder="ex. Palais des sports" />
+                {role !== 'ENSEIGNANT' && (
+                    <Input label="Numéro de l'enseignant" value={form.enseignantId} onChange={e => f('enseignantId', Number(e.target.value))} type="number" min="1" placeholder="ex. 3" />
+                )}
+                {role === 'ENSEIGNANT' && (
+                    <div className="mb-3">
+                      <label className="block text-sm text-gray-600 mb-1">Enseignant responsable</label>
+                      <div className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-600">
+                        {currentUser?.prenom} {currentUser?.nom} (ID #{currentUser?.id})
+                      </div>
+                    </div>
+                )}
+                <div className="mb-3">
+                  <label className="block text-sm text-gray-600 mb-1">Niveau cible</label>
+                  <select value={form.niveauCible} onChange={e => f('niveauCible', Number(e.target.value))}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+                    {niveauxCreation.map(n => <option key={n} value={n}>Niveau {n}</option>)}
+                  </select>
+                  {role === 'ENSEIGNANT' && <p className="text-xs text-gray-400 mt-1">Vous pouvez créer une compétition de votre niveau ou d’un niveau inférieur.</p>}
+                </div>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <Btn onClick={creer}>Créer</Btn>
+                <Btn variant="outline" onClick={() => setShowForm(false)}>Annuler</Btn>
+              </div>
+            </Card>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <Card title={`${competitions.length} compétition(s) affichée(s)`} action={<button onClick={charger} className="p-1.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-500 hover:text-blue-700 cursor-pointer" title="Actualiser"><RefreshCw size={15} /></button>}>
@@ -367,6 +401,9 @@ export default function CompetitionsView({ role, currentUser }) {
           </Card>
 
           <Card
+              title={selected ? `Résultats : ${selected.titre}` : 'Sélectionnez une compétition'}
+              action={selected && role === 'ENSEIGNANT' && Number(selected.enseignantId) === Number(currentUser?.id) && (
+                  <Btn size="sm" onClick={() => setShowResForm(!showResForm)}>+ Résultat</Btn>
               title={selected ? `Résultats — ${selected.titre}` : 'Sélectionnez une compétition'}
               action={selected && peutGererCompetition(selected) && (
                   <Btn size="sm" onClick={() => { setEditResultatId(null); setEditResForm(null); setShowResForm(!showResForm) }}>+ Résultat</Btn>

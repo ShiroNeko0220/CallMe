@@ -55,6 +55,7 @@ export const api = {
         axios.patch(`/api/badges/${idBadge}/dissocier`, {}, { headers: h(role) }),
     supprimer: (id, role)                =>
         axios.delete(`/api/badges/${id}`, { headers: h(role) }),
+    alertes:   (role)                    => axios.get('/api/badges/alertes', { headers: h(role) }),
   },
 
   presences: {

@@ -3,6 +3,7 @@ package fr.miage.toulouse.callme.presencems.config;
 import fr.miage.toulouse.callme.presencems.security.RoleHeaderFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -26,7 +27,11 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.POST, "/presences/badger").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/presences/**").hasAnyRole("MEMBRE", "ENSEIGNANT", "SECRETAIRE", "PRESIDENT")
+                        .anyRequest().authenticated()
+                )
                 .addFilterBefore(roleHeaderFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

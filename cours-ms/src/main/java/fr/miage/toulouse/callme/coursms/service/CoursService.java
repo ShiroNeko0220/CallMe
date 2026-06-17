@@ -37,11 +37,7 @@ public class CoursService {
         verifierNiveau(request.getNiveauCible());
         verifierDateCours(request.getDate());
 
-        Boolean apte = utilisateurClient.enseignantApte(
-                request.getEnseignantId(),
-                request.getNiveauCible()
-        );
-
+        Boolean apte = utilisateurClient.enseignantApte(request.getEnseignantId(), request.getNiveauCible());
         if (!Boolean.TRUE.equals(apte)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Enseignant non apte pour ce niveau");
         }

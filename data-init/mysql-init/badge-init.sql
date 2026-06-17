@@ -15,6 +15,18 @@ CREATE TABLE IF NOT EXISTS badge (
     KEY idx_badge_id_porteur (id_porteur)
 );
 
+CREATE TABLE IF NOT EXISTS alerte_badge (
+    id             BIGINT NOT NULL AUTO_INCREMENT,
+    type_activite  VARCHAR(50)  NOT NULL,
+    id_activite    VARCHAR(255) NOT NULL,
+    titre_activite VARCHAR(255) NOT NULL,
+    date_activite  DATE,
+    id_enseignant  BIGINT NOT NULL,
+    date_creation  DATETIME(6),
+    resolue        TINYINT(1) NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+
 INSERT INTO badge(id_badge, id_porteur, statut, date_creation, date_association)
 VALUES
     (1,  5,    'ASSOCIE',    NOW(6), NOW(6)),  -- membre 5 (niv 1)
@@ -23,7 +35,5 @@ VALUES
     (4,  8,    'ASSOCIE',    NOW(6), NOW(6)),  -- membre 8 (niv 4)
     (5,  9,    'ASSOCIE',    NOW(6), NOW(6)),  -- membre 9 (niv 5)
     (6,  NULL, 'DISPONIBLE', NOW(6), NULL),    -- disponible (test association)
-    (7,  NULL, 'PERDU',      NOW(6), NULL),    -- perdu
-    (8,  NULL, 'DESACTIVE',  NOW(6), NULL),    -- désactivé
-    (9,  10,   'ASSOCIE',    NOW(6), NOW(6)),  -- membre 10 (niv 3)
-    (10, NULL, 'DISPONIBLE', NOW(6), NULL);    -- disponible supplémentaire
+    (7,  10,   'ASSOCIE',    NOW(6), NOW(6)),  -- membre 10 (niv 3)
+    (8,  NULL, 'DISPONIBLE', NOW(6), NULL);    -- disponible supplémentaire

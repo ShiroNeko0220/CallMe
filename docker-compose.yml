@@ -1,17 +1,15 @@
-version: "3.8"
-
 services:
 
-  # ── Databases ─────────────────────────────────────────────────────────────
+  # Databases
 
   mysql-utilisateur:
     image: mysql:8.4
     container_name: mysql-utilisateur
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: utilisateur_db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3307:3306"
     volumes:
@@ -21,7 +19,7 @@ services:
       - callme-backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p${MYSQL_ROOT_PASSWORD} --silent"]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -31,10 +29,10 @@ services:
     image: mysql:8.4
     container_name: mysql-cours
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: cours_db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3308:3306"
     volumes:
@@ -44,7 +42,7 @@ services:
       - callme-backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p${MYSQL_ROOT_PASSWORD} --silent"]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -54,10 +52,10 @@ services:
     image: mysql:8.4
     container_name: mysql-badge
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: badge_db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3309:3306"
     volumes:
@@ -67,7 +65,7 @@ services:
       - callme-backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p${MYSQL_ROOT_PASSWORD} --silent"]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -77,10 +75,10 @@ services:
     image: mysql:8.4
     container_name: mysql-presence
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: presence_db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3310:3306"
     volumes:
@@ -90,7 +88,7 @@ services:
       - callme-backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p${MYSQL_ROOT_PASSWORD} --silent"]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -100,10 +98,10 @@ services:
     image: mysql:8.4
     container_name: mysql-statistiques
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: statistiques_db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3311:3306"
     volumes:
@@ -113,7 +111,7 @@ services:
       - callme-backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p${MYSQL_ROOT_PASSWORD} --silent"]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -125,8 +123,8 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: root
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: competition_db
     volumes:
       - callme-mongodb-data:/data/db
@@ -141,7 +139,7 @@ services:
       retries: 30
       start_period: 20s
 
-  # ── Messaging ─────────────────────────────────────────────────────────────
+  # Messaging
 
   callme-rabbitmq:
     image: rabbitmq:3.13-management
@@ -150,8 +148,8 @@ services:
       - "5672:5672"
       - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     networks:
       - callme-backend
     restart: unless-stopped
@@ -162,7 +160,7 @@ services:
       retries: 30
       start_period: 60s
 
-  # ── Infrastructure ────────────────────────────────────────────────────────
+  # Infrastructure
 
   callme-eureka:
     build:
@@ -207,7 +205,24 @@ services:
       - callme-backend
     restart: unless-stopped
 
-  # ── Config Server ─────────────────────────────────────────────────────────
+  callme-grafana:
+    image: grafana/grafana:latest
+    container_name: callme-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_DATASOURCES_DEFAULT_URL: http://callme-prometheus:9090
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - callme-prometheus
+    networks:
+      - callme-backend
+    restart: unless-stopped
+
+  # Config Server
 
   callme-config-server:
     build:
@@ -231,7 +246,7 @@ services:
       - callme-backend
     restart: unless-stopped
 
-  # ── API Gateway ───────────────────────────────────────────────────────────
+  # API Gateway
 
   callme-gateway:
     build:
@@ -253,7 +268,7 @@ services:
       - callme-backend
     restart: on-failure
 
-  # ── Microservices ─────────────────────────────────────────────────────────
+  # Microservices
 
   utilisateur-ms:
     build:
@@ -276,15 +291,11 @@ services:
       - "8081:8081"
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql-utilisateur:3306/utilisateur_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: user
-      SPRING_DATASOURCE_PASSWORD: password
-
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
       SPRING_RABBITMQ_HOST: callme-rabbitmq
-
       CONFIG_SERVER_URL: http://callme-config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
-
-
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
       MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
@@ -316,15 +327,11 @@ services:
       - "8082:8082"
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql-cours:3306/cours_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: user
-      SPRING_DATASOURCE_PASSWORD: password
-
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
       SPRING_RABBITMQ_HOST: callme-rabbitmq
-
       CONFIG_SERVER_URL: http://callme-config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
-
-
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
       MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
@@ -355,14 +362,10 @@ services:
     ports:
       - "8083:8083"
     environment:
-      SPRING_DATA_MONGODB_URI: mongodb://root:root@callme-mongodb:27017/competition_db?authSource=admin
-
+      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@callme-mongodb:27017/competition_db?authSource=admin
       SPRING_RABBITMQ_HOST: callme-rabbitmq
-
       CONFIG_SERVER_URL: http://callme-config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
-
-
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
       MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
@@ -386,19 +389,19 @@ services:
         condition: service_healthy
       utilisateur-ms:
         condition: service_started
+      callme-rabbitmq:
+        condition: service_healthy
       callme-zipkin:
         condition: service_started
     ports:
       - "8084:8084"
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql-badge:3306/badge_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: user
-      SPRING_DATASOURCE_PASSWORD: password
-
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      SPRING_RABBITMQ_HOST: callme-rabbitmq
       CONFIG_SERVER_URL: http://callme-config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
-
-
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
       MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
@@ -434,15 +437,11 @@ services:
       - "8085:8085"
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql-presence:3306/presence_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: user
-      SPRING_DATASOURCE_PASSWORD: password
-
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
       SPRING_RABBITMQ_HOST: callme-rabbitmq
-
       CONFIG_SERVER_URL: http://callme-config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
-
-
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
       MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
@@ -472,14 +471,11 @@ services:
       - "8086:8086"
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql-statistiques:3306/statistiques_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: user
-      SPRING_DATASOURCE_PASSWORD: password
-
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
       SPRING_RABBITMQ_HOST: callme-rabbitmq
-
       CONFIG_SERVER_URL: http://callme-config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://callme-eureka:8761/eureka/
-
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
       MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
@@ -514,3 +510,4 @@ volumes:
   mysql-presence-data:
   mysql-statistiques-data:
   callme-mongodb-data:
+  grafana-data:

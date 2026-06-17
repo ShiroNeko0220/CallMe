@@ -14,6 +14,11 @@ spring:
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: 5672
+    username: guest
+    password: guest
   cloud:
     openfeign:
       circuitbreaker:

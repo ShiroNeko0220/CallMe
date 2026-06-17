@@ -25,11 +25,13 @@ public class UtilisateurController {
     }
 
     @PostMapping("/login")
+    @PreAuthorize("permitAll()")
     public UtilisateurResponse login(@Valid @RequestBody LoginRequest request) {
         return service.login(request.getLogin(), request.getMdp());
     }
 
     @PostMapping
+    @PreAuthorize("permitAll()")
     public ResponseEntity<UtilisateurResponse> creer(@Valid @RequestBody UtilisateurCreationRequest u) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.creer(u));
     }
@@ -47,6 +49,7 @@ public class UtilisateurController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyRole('MEMBRE', 'ENSEIGNANT', 'SECRETAIRE', 'PRESIDENT')")
     public UtilisateurResponse modifier(
             @PathVariable Long id,
             @RequestHeader(value = "X-Utilisateur-Id", required = false) Long utilisateurConnecteId,

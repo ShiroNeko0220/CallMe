@@ -1,4 +1,4 @@
-# Configuration partagée par tous les microservices
+# Configuration partagee par tous les microservices
 eureka:
   client:
     service-url:
@@ -18,7 +18,7 @@ management:
       show-details: always
   tracing:
     sampling:
-      probability: 1.0
+      probability: ${TRACING_PROBABILITY:1.0}   # reduire a 0.1 en production
   zipkin:
     tracing:
       endpoint: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT:http://localhost:9411/api/v2/spans}

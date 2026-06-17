@@ -283,7 +283,8 @@ public class CompetitionService {
                 "id", saved.getId(),
                 "titre", saved.getTitre(),
                 "niveauCible", saved.getNiveauCible(),
-                "date", saved.getDate().toString()
+                "date", saved.getDate().toString(),
+                "enseignantId", saved.getEnseignantId()
         ));
     }
 

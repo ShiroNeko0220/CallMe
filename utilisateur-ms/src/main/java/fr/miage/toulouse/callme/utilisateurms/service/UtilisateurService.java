@@ -102,10 +102,18 @@ public class UtilisateurService {
     private void publishUtilisateur(Utilisateur u) {
         try {
             rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.KEY_UTILISATEUR,
-                    Map.of("id", u.getId(), "niveauExpertise", u.getNiveauExpertise()));
+                    Map.of(
+                        "id", u.getId(),
+                        "niveauExpertise", u.getNiveauExpertise(),
+                        "role", u.getRole().name()
+                    ));
         } catch (Exception e) {
-            // non-bloquant : la statistique sera éventuellement cohérente
+            // non-bloquant
         }
+    }
+
+    public void publierTousLesUtilisateurs() {
+        repo.findAll().forEach(this::publishUtilisateur);
     }
 
     private UtilisateurResponse toDTO(Utilisateur u) {

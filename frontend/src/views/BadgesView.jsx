@@ -1,14 +1,15 @@
 ﻿import { useState, useEffect } from 'react'
-import { CreditCard, RefreshCw } from 'lucide-react'
+import { CreditCard, RefreshCw, Bell } from 'lucide-react'
 import { api } from '../api'
 import { Card, BadgeTag, Btn, Alert, Spinner, ConfirmModal } from '../components/Card'
 
-const STATUT_COLOR = { ASSOCIE: 'green', DISPONIBLE: 'blue', PERDU: 'red', DESACTIVE: 'gray' }
+const STATUT_COLOR = { ASSOCIE: 'green', DISPONIBLE: 'blue' }
 const selectCls = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
 
 export default function BadgesView({ role }) {
   const [badges,    setBadges]    = useState([])
   const [membres,   setMembres]   = useState([])
+  const [alertes,   setAlertes]   = useState([])
   const [loading,   setLoading]   = useState(true)
   const [alert,     setAlert]     = useState(null)
   const [confirm,   setConfirm]   = useState(null)
@@ -17,6 +18,9 @@ export default function BadgesView({ role }) {
   useEffect(() => {
     charger()
     api.utilisateurs.lister(role).then(r => setMembres(r.data)).catch(() => {})
+    if (role === 'SECRETAIRE') {
+      api.badges.alertes(role).then(r => setAlertes(r.data)).catch(() => {})
+    }
   }, [])
 
   const charger = async () => {
@@ -124,7 +128,7 @@ export default function BadgesView({ role }) {
           ))}
         </div>
 
-        {['SECRETAIRE', 'PRESIDENT'].includes(role) && (
+        {role === 'SECRETAIRE' && (
             <Card title="Associer un badge à un membre">
               <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-end">
                 <div>
@@ -154,6 +158,32 @@ export default function BadgesView({ role }) {
             </Card>
         )}
 
+        {role === 'SECRETAIRE' && alertes.length > 0 && (
+            <Card title={
+              <span className="flex items-center gap-2 text-amber-700">
+                <Bell size={16} /> Alertes badges ({alertes.length})
+              </span>
+            }>
+              <div className="space-y-2">
+                {alertes.map(a => {
+                  const membre = membres.find(m => m.id === a.idEnseignant)
+                  const nom = membre ? `${membre.prenom} ${membre.nom}` : `#${a.idEnseignant}`
+                  return (
+                    <div key={a.id} className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm">
+                      <Bell size={15} className="text-amber-500 mt-0.5 shrink-0" />
+                      <div>
+                        <span className="font-medium text-amber-800">{nom}</span>
+                        <span className="text-amber-700"> n'a pas de badge associé et a créé un{a.typeActivite === 'COURS' ? ' cours' : 'e compétition'} :</span>
+                        <span className="font-semibold text-amber-900"> {a.titreActivite}</span>
+                        {a.dateActivite && <span className="text-amber-600 ml-1">({new Date(a.dateActivite).toLocaleDateString('fr-FR')})</span>}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+        )}
+
         <Card title="Liste des badges" action={<button onClick={charger} className="p-1.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-500 hover:text-blue-700 cursor-pointer" title="Actualiser"><RefreshCw size={15} /></button>}>
           {loading ? <Spinner /> : (
               <table className="w-full text-sm">
@@ -165,6 +195,7 @@ export default function BadgesView({ role }) {
                   <th className="pb-2 pr-4">Créé le</th>
                   <th className="pb-2 pr-4">Associé le</th>
                   {['SECRETAIRE', 'PRESIDENT'].includes(role) && <th className="pb-2">Actions</th>}
+
                 </tr>
                 </thead>
                 <tbody>
@@ -188,7 +219,7 @@ export default function BadgesView({ role }) {
                       {['SECRETAIRE', 'PRESIDENT'].includes(role) && (
                           <td className="py-2">
                             <div className="flex items-center gap-2">
-                              {b.statut === 'ASSOCIE' && (
+                              {b.statut === 'ASSOCIE' && role === 'SECRETAIRE' && (
                                   <Btn size="sm" variant="outline" onClick={() => dissocier(b.idBadge)}>Dissocier</Btn>
                               )}
                               {b.statut !== 'ASSOCIE' && (

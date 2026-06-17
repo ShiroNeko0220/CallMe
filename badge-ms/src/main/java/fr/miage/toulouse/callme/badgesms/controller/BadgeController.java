@@ -1,5 +1,6 @@
 package fr.miage.toulouse.callme.badgesms.controller;
 
+import fr.miage.toulouse.callme.badgesms.DTO.AlerteBadgeResponse;
 import fr.miage.toulouse.callme.badgesms.DTO.BadgeRequest;
 import fr.miage.toulouse.callme.badgesms.DTO.BadgeResponse;
 import fr.miage.toulouse.callme.badgesms.service.BadgeService;
@@ -54,6 +55,12 @@ public class BadgeController {
             @PathVariable Long idBadge,
             @RequestHeader(value = "X-Role", required = false) String roleConnecte) {
         return service.dissocierBadge(idBadge);
+    }
+
+    @GetMapping("/alertes")
+    @PreAuthorize("hasRole('SECRETAIRE')")
+    public List<AlerteBadgeResponse> alertes() {
+        return service.listerAlertes();
     }
 
     @DeleteMapping("/{id}")

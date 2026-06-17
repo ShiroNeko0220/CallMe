@@ -59,50 +59,53 @@ public class StatistiquesEventListener {
     @RabbitListener(queues = RabbitMQConfig.QUEUE_PRESENCE)
     public void onPresence(Map<String, Object> event) {
         try {
-            StatPresence presence = StatPresence.builder()
-                    .id(toLong(event.get("id")))
+            Long id = toLong(event.get("id"));
+            if (presenceRepo.existsById(id)) return;
+            presenceRepo.save(StatPresence.builder()
+                    .id(id)
                     .idPorteur(toLong(event.get("idPorteur")))
                     .idCours(toLong(event.get("idCours")))
                     .dateBadgeage(LocalDateTime.parse(event.get("dateBadgeage").toString()))
-                    .build();
-            presenceRepo.save(presence);
-            log.info("[STAT] Présence enregistrée id={}", presence.getId());
+                    .build());
+            log.info("[STAT] Presence enregistree id={}", id);
         } catch (Exception e) {
-            log.error("[STAT] Erreur traitement event présence: {}", e.getMessage());
+            log.error("[STAT] Erreur traitement event presence: {}", e.getMessage());
         }
     }
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_COMPETITION)
     public void onCompetition(Map<String, Object> event) {
         try {
-            StatCompetition competition = StatCompetition.builder()
-                    .id(event.get("id").toString())
+            String id = event.get("id").toString();
+            if (competitionRepo.existsById(id)) return;
+            competitionRepo.save(StatCompetition.builder()
+                    .id(id)
                     .titre((String) event.get("titre"))
                     .niveauCible(toInt(event.get("niveauCible")))
                     .date(LocalDate.parse(event.get("date").toString()))
-                    .build();
-            competitionRepo.save(competition);
-            log.info("[STAT] Compétition enregistrée id={}", competition.getId());
+                    .build());
+            log.info("[STAT] Competition enregistree id={}", id);
         } catch (Exception e) {
-            log.error("[STAT] Erreur traitement event compétition: {}", e.getMessage());
+            log.error("[STAT] Erreur traitement event competition: {}", e.getMessage());
         }
     }
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_RESULTAT)
     public void onResultat(Map<String, Object> event) {
         try {
-            StatResultat resultat = StatResultat.builder()
-                    .id(event.get("id").toString())
+            String id = event.get("id").toString();
+            if (resultatRepo.existsById(id)) return;
+            resultatRepo.save(StatResultat.builder()
+                    .id(id)
                     .competitionId(event.get("competitionId").toString())
                     .eleveId(toLong(event.get("eleveId")))
                     .enseignantId(toLong(event.get("enseignantId")))
                     .note(new BigDecimal(event.get("note").toString()))
                     .competitionDate(LocalDate.parse(event.get("competitionDate").toString()))
-                    .build();
-            resultatRepo.save(resultat);
-            log.info("[STAT] Résultat enregistré id={}", resultat.getId());
+                    .build());
+            log.info("[STAT] Resultat enregistre id={}", id);
         } catch (Exception e) {
-            log.error("[STAT] Erreur traitement event résultat: {}", e.getMessage());
+            log.error("[STAT] Erreur traitement event resultat: {}", e.getMessage());
         }
     }
 
